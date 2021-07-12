@@ -1,5 +1,3 @@
-
----
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -20,7 +18,7 @@ rules:
 - apiGroups:
   - externaldns.olm.openshift.io
   resources:
-  - externaldns
+  - externaldnses
   verbs:
   - create
   - delete
@@ -32,13 +30,13 @@ rules:
 - apiGroups:
   - externaldns.olm.openshift.io
   resources:
-  - externaldns/finalizers
+  - externaldnses/finalizers
   verbs:
   - update
 - apiGroups:
   - externaldns.olm.openshift.io
   resources:
-  - externaldns/status
+  - externaldnses/status
   verbs:
   - get
   - patch
