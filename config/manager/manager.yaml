@@ -3,13 +3,13 @@ kind: Namespace
 metadata:
   labels:
     name: external-dns-operator
-  name: external-dns-operator
+  name: openshift-external-dns-operator
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: external-dns-operator
-  namespace: external-dns-operator
+  namespace: openshift-external-dns-operator
   labels:
     name: external-dns-operator
 spec:
@@ -27,7 +27,7 @@ spec:
       securityContext:
         runAsNonRoot: true
       containers:
-      - name: operator
+      - name: external-dns-operator
         image: quay.io/openshift/origin-external-dns-operator:latest
         args:
         - --operator-namespace=$(OPERATOR_NAMESPACE)

@@ -33,12 +33,12 @@ import (
 func (r *reconciler) ensureExternalDNSServiceAccount(ctx context.Context, namespace string, externalDNS *operatorv1alpha1.ExternalDNS) (bool, *corev1.ServiceAccount, error) {
 	desired := desiredExternalDNSServiceAccount(namespace, externalDNS)
 
-	haveServiceAccount, current, err := r.currentExternalDNSServiceAccount(ctx, namespace, externalDNS)
+	exist, current, err := r.currentExternalDNSServiceAccount(ctx, namespace, externalDNS)
 	if err != nil {
 		return false, nil, err
 	}
 
-	if !haveServiceAccount {
+	if !exist {
 		if err := r.createExternalDNSServiceAccount(ctx, desired); err != nil {
 			return false, nil, err
 		}
@@ -51,7 +51,7 @@ func (r *reconciler) ensureExternalDNSServiceAccount(ctx context.Context, namesp
 // currentExternalDNSServiceAccount gets the current externalDNS service account resource.
 func (r *reconciler) currentExternalDNSServiceAccount(ctx context.Context, namespace string, externalDNS *operatorv1alpha1.ExternalDNS) (bool, *corev1.ServiceAccount, error) {
 	sa := &corev1.ServiceAccount{}
-	if err := r.client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: controller.ExternalDNSServiceAccountName(externalDNS)}, sa); err != nil {
+	if err := r.client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: controller.ExternalDNSResourceName(externalDNS)}, sa); err != nil {
 		if errors.IsNotFound(err) {
 			return false, nil, nil
 		}
@@ -62,18 +62,15 @@ func (r *reconciler) currentExternalDNSServiceAccount(ctx context.Context, names
 
 // desiredExternalDNSServiceAccount returns the desired serivce account resource.
 func desiredExternalDNSServiceAccount(namespace string, externalDNS *operatorv1alpha1.ExternalDNS) *corev1.ServiceAccount {
-	sa := &corev1.ServiceAccount{
+	return &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
-			Name:      controller.ExternalDNSServiceAccountName(externalDNS),
+			Name:      controller.ExternalDNSResourceName(externalDNS),
 		},
 	}
-
-	return sa
 }
 
-// createExternalDNSServiceAccount creates the given service account using the reconciler's
-// client.
+// createExternalDNSServiceAccount creates the given service account using the reconciler's client.
 func (r *reconciler) createExternalDNSServiceAccount(ctx context.Context, sa *corev1.ServiceAccount) error {
 	if err := r.client.Create(ctx, sa); err != nil {
 		return fmt.Errorf("failed to create externalDNS service account %s/%s: %w", sa.Namespace, sa.Name, err)

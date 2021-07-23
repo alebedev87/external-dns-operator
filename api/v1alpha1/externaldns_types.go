@@ -38,7 +38,7 @@ type ExternalDNS struct {
 	// spec is the specification of the desired behavior of the ExternalDNS.
 	Spec ExternalDNSSpec `json:"spec"`
 	// status is the most recently observed status of the ExternalDNS.
-	Status ExternalDNSStatus `json:"status"`
+	Status ExternalDNSStatus `json:"status,omitempty"`
 }
 
 // ExternalDNSSpec defines the desired state of the ExternalDNS.

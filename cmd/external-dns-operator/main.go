@@ -41,6 +41,7 @@ func main() {
 	flag.StringVar(&opCfg.OperatorNamespace, "operator-namespace", operatorconfig.DefaultOperatorNamespace, "The namespace that the operator is running in.")
 	flag.StringVar(&opCfg.OperandNamespace, "operand-namespace", operatorconfig.DefaultOperandNamespace, "The namespace that ExternalDNS containers should run in.")
 	flag.StringVar(&opCfg.ExternalDNSImage, "externaldns-image", operatorconfig.DefaultExternalDNSImage, "The container image used for running ExternalDNS.")
+	flag.IntVar(&opCfg.RequeuePeriodSeconds, "requeue-period", operatorconfig.DefaultRequeuePeriodSeconds, "How much time to wait after a failed reconcile (in seconds).")
 	opts := zap.Options{
 		Development: true,
 	}

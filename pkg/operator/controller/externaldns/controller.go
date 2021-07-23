@@ -19,6 +19,7 @@ package externaldnscontroller
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 
@@ -44,6 +45,8 @@ type Config struct {
 	Namespace string
 	// Image is the ExternalDNS image to use.
 	Image string
+	// RequeuePeriodSeconds is the time before the next reconcile is run if the previous failed.
+	RequeuePeriodSeconds int
 }
 
 // reconciler reconciles an ExternalDNS object.
@@ -66,6 +69,7 @@ func New(mgr manager.Manager, cfg Config) (controller.Controller, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	if err := c.Watch(&source.Kind{Type: &operatorv1alpha1.ExternalDNS{}}, &handler.EnqueueRequestForObject{}); err != nil {
 		return nil, err
 	}
@@ -77,6 +81,7 @@ func New(mgr manager.Manager, cfg Config) (controller.Controller, error) {
 // the object match the desired state.
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	result := reconcile.Result{}
+	requeueResult := reconcile.Result{RequeueAfter: time.Duration(r.config.RequeuePeriodSeconds) * time.Second, Requeue: true}
 
 	externalDNS := &operatorv1alpha1.ExternalDNS{}
 	if err := r.client.Get(ctx, req.NamespacedName, externalDNS); err != nil {
@@ -88,16 +93,16 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	if _, _, err := r.ensureExternalDNSNamespace(ctx, r.config.Namespace); err != nil {
-		// Return if the externalDNS namespace cannot be created since
-		// resource creation in a namespace that does not exist will fail.
-		return result, fmt.Errorf("failed to ensure externalDNS namespace: %v", err)
+		return requeueResult, fmt.Errorf("failed to ensure externalDNS namespace: %w", err)
 	}
 
-	haveServiceAccount, _, err := r.ensureExternalDNSServiceAccount(ctx, r.config.Namespace, externalDNS)
+	_, sa, err := r.ensureExternalDNSServiceAccount(ctx, r.config.Namespace, externalDNS)
 	if err != nil {
-		return result, fmt.Errorf("failed to ensure externalDNS service account: %w", err)
-	} else if !haveServiceAccount {
-		return result, fmt.Errorf("failed to get externalDNS service account: %w", err)
+		return requeueResult, fmt.Errorf("failed to ensure externalDNS service account: %w", err)
+	}
+
+	if _, _, err := r.ensureExternalDNSDeployment(ctx, r.config.Namespace, r.config.Image, sa, externalDNS); err != nil {
+		return requeueResult, fmt.Errorf("failed to ensure externalDNS deployment: %w", err)
 	}
 
 	return result, nil

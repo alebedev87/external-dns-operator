@@ -17,10 +17,11 @@ limitations under the License.
 package config
 
 const (
-	DefaultExternalDNSImage  = "docker.io/bitnami/external-dns:latest"
-	DefaultMetricsAddr       = "127.0.0.1:8080"
-	DefaultOperatorNamespace = "externaldns-operator"
-	DefaultOperandNamespace  = "externaldns"
+	DefaultExternalDNSImage     = "docker.io/bitnami/external-dns:latest"
+	DefaultMetricsAddr          = "127.0.0.1:8080"
+	DefaultOperatorNamespace    = "openshift-external-dns-operator"
+	DefaultOperandNamespace     = "external-dns"
+	DefaultRequeuePeriodSeconds = 2
 )
 
 // Config is configuration of the operator.
@@ -38,14 +39,18 @@ type Config struct {
 
 	// OperandNamespace is the namespace that the operator should deploy ExternalDNS container(s) in.
 	OperandNamespace string
+
+	// RequeuePeriodSeconds is how much time to wait after a failed reconcile.
+	RequeuePeriodSeconds int
 }
 
 // New returns an operator config using default values.
 func New() *Config {
 	return &Config{
-		ExternalDNSImage:   DefaultExternalDNSImage,
-		MetricsBindAddress: DefaultMetricsAddr,
-		OperatorNamespace:  DefaultOperatorNamespace,
-		OperandNamespace:   DefaultOperandNamespace,
+		ExternalDNSImage:     DefaultExternalDNSImage,
+		MetricsBindAddress:   DefaultMetricsAddr,
+		OperatorNamespace:    DefaultOperatorNamespace,
+		OperandNamespace:     DefaultOperandNamespace,
+		RequeuePeriodSeconds: DefaultRequeuePeriodSeconds,
 	}
 }
