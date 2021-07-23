@@ -34,12 +34,16 @@ import (
 )
 
 const (
+<<<<<<< HEAD
 	startPortMetrics    = 7979
 	appNameLabel        = "app.kubernetes.io/name"
 	appInstanceLabel    = "app.kubernetes.io/instance"
 	masterNodeRoleLabel = "node-role.kubernetes.io/master"
 	osLabel             = "kubernetes.io/os"
 	linuxOS             = "linux"
+=======
+	startPortMetrics = 7979
+>>>>>>> 41263c5... begin implementing deployment logic
 )
 
 // providerStringTable maps ExternalDNSProviderType values from the
@@ -117,6 +121,14 @@ func desiredExternalDNSDeployment(namespace, image string, serviceAccount *corev
 		masterNodeRoleLabel: "",
 	}
 
+    controlPlaneTolerations := []corev1.Toleration{
+        {
+            Key:      masterNodeRoleLabel,
+            Operator: corev1.TolerationOpExists,
+            Effect:   corev1.TaintEffectNoSchedule,
+        },
+    }
+
 	depl := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      controller.ExternalDNSResourceName(externalDNS),
@@ -134,6 +146,7 @@ func desiredExternalDNSDeployment(namespace, image string, serviceAccount *corev
 				Spec: corev1.PodSpec{
 					ServiceAccountName: serviceAccount.Name,
 					NodeSelector:       nodeSelectorLbl,
+					Tolerations: controlPlaneTolerations,
 				},
 			},
 		},
