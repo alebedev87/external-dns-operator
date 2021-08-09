@@ -211,6 +211,10 @@ func buildExternalDNSContainer(seq int, image, zone, provider, source string, ex
 		args = append(args, "--ignore-hostname-annotation")
 	}
 
+	if externalDNS.Spec.Source.FQDNTemplate != "" {
+		args = append(args, fmt.Sprintf("--fqdn-template=%s", externalDNS.Spec.Source.FQDNTemplate))
+	}
+
 	//TODO: Add logic for the CRD source.
 
 	return &corev1.Container{
