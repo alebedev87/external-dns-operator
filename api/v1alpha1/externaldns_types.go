@@ -407,6 +407,19 @@ type ExternalDNSSource struct {
 	// +kubebuilder:default:=Ignore
 	// +required
 	HostnameAnnotationPolicy HostnameAnnotationPolicy `json:"hostnameAnnotation"`
+
+	// FQDNTemplate sets a templated string that's used to generate DNS names
+	// from sources that don't define a hostname themselves.
+	// Accepts comma separated list for multiple global FQDN.
+	//
+	// Especially useful when HostnameAnnotationPolicy is set to Ignore.
+	//
+	// Provided template should follow the syntax defined for text/template Go package,
+	// see https://pkg.go.dev/text/template.
+	// Annotations inside the template correspond to the definition of the source data structure.
+	// +kubebuilder:validation:Optional
+	// +optional
+	FQDNTemplate string `json:"fqdnTemplate"`
 }
 
 // ExternalDNSSourceUnion describes optional fields for an ExternalDNS source that should

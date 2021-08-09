@@ -12,4 +12,5 @@ spec:
         namespace: openshift-external-dns-operator
   source:
     type: Service
+    fqdnTemplate: "{{.Name}}.externaldnstest.com"
   zones: ["dnszone"]

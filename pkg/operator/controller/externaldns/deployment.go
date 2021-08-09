@@ -34,16 +34,12 @@ import (
 )
 
 const (
-<<<<<<< HEAD
 	startPortMetrics    = 7979
 	appNameLabel        = "app.kubernetes.io/name"
 	appInstanceLabel    = "app.kubernetes.io/instance"
 	masterNodeRoleLabel = "node-role.kubernetes.io/master"
 	osLabel             = "kubernetes.io/os"
 	linuxOS             = "linux"
-=======
-	startPortMetrics = 7979
->>>>>>> 41263c5... begin implementing deployment logic
 )
 
 // providerStringTable maps ExternalDNSProviderType values from the
@@ -121,13 +117,13 @@ func desiredExternalDNSDeployment(namespace, image string, serviceAccount *corev
 		masterNodeRoleLabel: "",
 	}
 
-    controlPlaneTolerations := []corev1.Toleration{
-        {
-            Key:      masterNodeRoleLabel,
-            Operator: corev1.TolerationOpExists,
-            Effect:   corev1.TaintEffectNoSchedule,
-        },
-    }
+	controlPlaneTolerations := []corev1.Toleration{
+		{
+			Key:      masterNodeRoleLabel,
+			Operator: corev1.TolerationOpExists,
+			Effect:   corev1.TaintEffectNoSchedule,
+		},
+	}
 
 	depl := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -146,7 +142,7 @@ func desiredExternalDNSDeployment(namespace, image string, serviceAccount *corev
 				Spec: corev1.PodSpec{
 					ServiceAccountName: serviceAccount.Name,
 					NodeSelector:       nodeSelectorLbl,
-					Tolerations: controlPlaneTolerations,
+					Tolerations:        controlPlaneTolerations,
 				},
 			},
 		},
@@ -213,6 +209,10 @@ func populateExternalDNSContainer(image string, metricsPort int, zone string, ex
 
 	if externalDNS.Spec.Source.HostnameAnnotationPolicy == operatorv1alpha1.HostnameAnnotationPolicyIgnore {
 		args = append(args, "--ignore-hostname-annotation")
+	}
+
+	if externalDNS.Spec.Source.FQDNTemplate != "" {
+		args = append(args, fmt.Sprintf("--fqdn-template=%s", externalDNS.Spec.Source.FQDNTemplate))
 	}
 
 	//TODO: Add logic for the CRD source.
