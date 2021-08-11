@@ -19,6 +19,7 @@ package externaldnscontroller
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"sort"
 
 	"github.com/google/go-cmp/cmp"
@@ -154,7 +155,8 @@ func desiredExternalDNSDeployment(namespace, image string, serviceAccount *corev
 
 // WIP function for generating container specs for one container at a time.
 func buildExternalDNSContainer(image string, seq int, zone string, externalDNS *operatorv1alpha1.ExternalDNS) (*corev1.Container, error) {
-	name := fmt.Sprintf("externaldns-%d", seq+1)
+	//name := fmt.Sprintf("externaldns-%d", seq+1)
+	name := controller.ExternalDNSContainerName(zone)
 
 	args := []string{
 		fmt.Sprintf("--metrics-address=127.0.0.1:%d", metricsStartPort+seq),
@@ -258,23 +260,66 @@ func (r *reconciler) updateExternalDNSDeployment(ctx context.Context, current, d
 // externalDNSDeploymentChanged evaluates whether or not a deployment update is necessary.
 // Returns a boolean if an update is necessary, and the deployment resource to update to.
 func externalDNSDeploymentChanged(current, expected *appsv1.Deployment) (bool, *appsv1.Deployment) {
-	changed := false
 	updated := current.DeepCopy()
+	// index field of the map's value matches the container index from updated variable
+	currentContMap := buildIndexedContainerMap(current.Spec.Template.Spec.Containers)
 
-	if len(current.Spec.Template.Spec.Containers) > 0 && len(expected.Spec.Template.Spec.Containers) > 0 {
-		if current.Spec.Template.Spec.Containers[0].Image != expected.Spec.Template.Spec.Containers[0].Image {
-			updated.Spec.Template.Spec.Containers[0].Image = expected.Spec.Template.Spec.Containers[0].Image
-			changed = true
-		}
-		currArgs := append([]string{}, current.Spec.Template.Spec.Containers[0].Args...)
-		expArgs := append([]string{}, expected.Spec.Template.Spec.Containers[0].Args...)
-		sort.Strings(currArgs)
-		sort.Strings(expArgs)
-		if !cmp.Equal(currArgs, expArgs) {
-			updated.Spec.Template.Spec.Containers[0].Args = expected.Spec.Template.Spec.Containers[0].Args
-			changed = true
+	// iterating over the expected containers
+	for _, expCont := range expected.Spec.Template.Spec.Containers {
+		// if the current deployment has the expected container (same zone): check the container fields
+		if currCont, found := currentContMap[expCont.Name]; found {
+			if currCont.Image != expCont.Image {
+				updated.Spec.Template.Spec.Containers[currCont.Index].Image = expCont.Image
+			}
+			if !equalStringSliceContent(expCont.Args, currCont.Args) {
+				updated.Spec.Template.Spec.Containers[currCont.Index].Args = expCont.Args
+			}
+			delete(currentContMap, expCont.Name)
+		} else {
+			// if the current deployment doesn't have the expected container (new zone): add it
+			updated.Spec.Template.Spec.Containers = append(updated.Spec.Template.Spec.Containers, expCont)
 		}
 	}
 
-	return changed, updated
+	// extra containers which are not in the expected deployment anymore (deleted zone)
+	if len(currentContMap) > 0 {
+		updatedContainers := []corev1.Container{}
+		for _, cont := range updated.Spec.Template.Spec.Containers {
+			if _, exist := currentContMap[cont.Name]; !exist {
+				updatedContainers = append(updatedContainers, cont)
+			}
+		}
+		updated.Spec.Template.Spec.Containers = updatedContainers
+	}
+
+	return !reflect.DeepEqual(current, updated), updated
+}
+
+// indexedContainer is the standard core POD's container with additional index field
+type indexedContainer struct {
+	corev1.Container
+	Index int
+}
+
+// buildIndexedContainerMap builds a map from the given list of containers
+// key is the container name
+// value is the indexed container with index being the sequence number of the given list
+func buildIndexedContainerMap(containers []corev1.Container) map[string]indexedContainer {
+	m := map[string]indexedContainer{}
+	for i, cont := range containers {
+		m[cont.Name] = indexedContainer{
+			Container: cont,
+			Index:     i,
+		}
+	}
+	return m
+}
+
+// equalStringSliceContent returns true if 2 string slices have the same content (order doesn't matter)
+func equalStringSliceContent(sl1, sl2 []string) bool {
+	copy1 := append([]string{}, sl1...)
+	copy2 := append([]string{}, sl2...)
+	sort.Strings(copy1)
+	sort.Strings(copy2)
+	return cmp.Equal(copy1, copy2)
 }

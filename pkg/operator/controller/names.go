@@ -27,3 +27,7 @@ const (
 func ExternalDNSResourceName(externalDNS *operatorv1alpha1.ExternalDNS) string {
 	return ExternalDNSBaseName + "-" + externalDNS.Name
 }
+
+func ExternalDNSContainerName(zone string) string {
+	return ExternalDNSBaseName + "-" + zone
+}
