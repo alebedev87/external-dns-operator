@@ -19,7 +19,6 @@ package externaldnscontroller
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"sort"
 
 	"github.com/google/go-cmp/cmp"
@@ -155,7 +154,6 @@ func desiredExternalDNSDeployment(namespace, image string, serviceAccount *corev
 
 // WIP function for generating container specs for one container at a time.
 func buildExternalDNSContainer(image string, seq int, zone string, externalDNS *operatorv1alpha1.ExternalDNS) (*corev1.Container, error) {
-	//name := fmt.Sprintf("externaldns-%d", seq+1)
 	name := controller.ExternalDNSContainerName(zone)
 
 	args := []string{
@@ -261,38 +259,43 @@ func (r *reconciler) updateExternalDNSDeployment(ctx context.Context, current, d
 // Returns a boolean if an update is necessary, and the deployment resource to update to.
 func externalDNSDeploymentChanged(current, expected *appsv1.Deployment) (bool, *appsv1.Deployment) {
 	updated := current.DeepCopy()
-	// index field of the map's value matches the container index from updated variable
-	currentContMap := buildIndexedContainerMap(current.Spec.Template.Spec.Containers)
 
-	// iterating over the expected containers
-	for _, expCont := range expected.Spec.Template.Spec.Containers {
-		// if the current deployment has the expected container (same zone): check the container fields
-		if currCont, found := currentContMap[expCont.Name]; found {
+	return externalDNSContainersChanged(current, expected, updated), updated
+}
+
+// externalDNSContainersChanged returns true if the current containers differ from the expected
+func externalDNSContainersChanged(current, expected, updated *appsv1.Deployment) bool {
+	changed := false
+
+	// number of container is different: let's reset them all
+	if len(current.Spec.Template.Spec.Containers) != len(expected.Spec.Template.Spec.Containers) {
+		updated.Spec.Template.Spec.Containers = expected.Spec.Template.Spec.Containers
+		return true
+	}
+
+	currentContMap := buildIndexedContainerMap(current.Spec.Template.Spec.Containers)
+	expectedContMap := buildIndexedContainerMap(expected.Spec.Template.Spec.Containers)
+
+	// let's check that all the current containers have the desired values set
+	for currName, currCont := range currentContMap {
+		// if the current container is expected: check its fields
+		if expCont, found := expectedContMap[currName]; found {
 			if currCont.Image != expCont.Image {
 				updated.Spec.Template.Spec.Containers[currCont.Index].Image = expCont.Image
+				changed = true
 			}
 			if !equalStringSliceContent(expCont.Args, currCont.Args) {
 				updated.Spec.Template.Spec.Containers[currCont.Index].Args = expCont.Args
+				changed = true
 			}
-			delete(currentContMap, expCont.Name)
 		} else {
-			// if the current deployment doesn't have the expected container (new zone): add it
-			updated.Spec.Template.Spec.Containers = append(updated.Spec.Template.Spec.Containers, expCont)
+			// if the current container is not expected: let's not dig deeper - reset all
+			updated.Spec.Template.Spec.Containers = expected.Spec.Template.Spec.Containers
+			return true
 		}
 	}
 
-	// extra containers which are not in the expected deployment anymore (deleted zone)
-	if len(currentContMap) > 0 {
-		updatedContainers := []corev1.Container{}
-		for _, cont := range updated.Spec.Template.Spec.Containers {
-			if _, exist := currentContMap[cont.Name]; !exist {
-				updatedContainers = append(updatedContainers, cont)
-			}
-		}
-		updated.Spec.Template.Spec.Containers = updatedContainers
-	}
-
-	return !reflect.DeepEqual(current, updated), updated
+	return changed
 }
 
 // indexedContainer is the standard core POD's container with additional index field
