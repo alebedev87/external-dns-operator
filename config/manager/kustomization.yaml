@@ -2,10 +2,10 @@ resources:
 - manager.yaml
 
 # Uncomment the following lines to override the operator's image with the image of your choice (i.e. personal registry).
-#images:
-#  - name: quay.io/openshift/origin-external-dns-operator
-#    newName: quay.io/alebedev87/external-dns-operator
-#    newTag: latest
+images:
+  - name: quay.io/openshift/origin-external-dns-operator
+    newName: quay.io/alebedev87/external-dns-operator
+    newTag: latest
 
 generatorOptions:
   disableNameSuffixHash: true
