@@ -119,6 +119,14 @@ func desiredExternalDNSDeployment(namespace, image string, serviceAccount *corev
 		masterNodeRoleLabel: "",
 	}
 
+	tolerations := []corev1.Toleration{
+		{
+			Key:      masterNodeRoleLabel,
+			Operator: corev1.TolerationOpExists,
+			Effect:   corev1.TaintEffectNoSchedule,
+		},
+	}
+
 	depl := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      controller.ExternalDNSResourceName(externalDNS),
@@ -136,6 +144,7 @@ func desiredExternalDNSDeployment(namespace, image string, serviceAccount *corev
 				Spec: corev1.PodSpec{
 					ServiceAccountName: serviceAccount.Name,
 					NodeSelector:       nodeSelectorLbl,
+					Tolerations:        tolerations,
 				},
 			},
 		},
