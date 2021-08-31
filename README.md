@@ -17,9 +17,10 @@ This Operator is in the early stages of implementation. For the time being, plea
 2. Make sure to uncomment the `image` in `config/manager/kustomization.yaml` and set it to the operator image you pushed
 3. Run `kubectl apply -k config/default`
 4. Now you can deploy an instance of ExternalDNS:
-    * Run the following command to create the credentials secret on AWS:
+    * Run the following commands to create the credentials secret on AWS:
         ```bash
-        kubectl -n external-dns-operator create secret generic aws-access-key \
+        $ kubectl create namespace external-dns
+        $ kubectl -n external-dns create secret generic aws-access-key \
                 --from-literal=aws_access_key_id=${ACCESS_KEY_ID}
                 --from-literal=aws_secret_access_key=${ACCESS_SECRET_KEY}
         ```
@@ -31,6 +32,7 @@ This Operator is in the early stages of implementation. For the time being, plea
 
 ### 4.10
 - Complete deployment logic:
+    - Secret sync controller (to copy credentials secret into the operand namespace)
     - Validation/status
         - FQDNTemplate must be there if hostname annotation is allowed
         - Secret is mandatory

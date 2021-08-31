@@ -17,9 +17,7 @@ limitations under the License.
 package externaldnscontroller
 
 import (
-	_ "fmt"
 	"reflect"
-	_ "strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
