@@ -136,16 +136,13 @@ func (b *externalDNSContainerBuilder) fillProviderAgnosticFields(seq int, zone s
 	}
 
 	if b.externalDNS.Spec.Source.Service != nil && len(b.externalDNS.Spec.Source.Service.ServiceType) > 0 {
-		serviceTypeFilter, publishInternal := "", false
+		publishInternal := false
 		for _, serviceType := range b.externalDNS.Spec.Source.Service.ServiceType {
-			serviceTypeFilter += string(serviceType) + ","
+			args = append(args, fmt.Sprintf("--service-type-filter=%s", string(serviceType)))
 			if serviceType == corev1.ServiceTypeClusterIP {
 				publishInternal = true
 			}
 		}
-
-		// avoid having a trailing comma
-		args = append(args, fmt.Sprintf("--service-type-filter=%s", serviceTypeFilter[0:len(serviceTypeFilter)-1]))
 
 		// legacy option before the service-type-filter was introduced
 		// must be there though, ClusterIP endpoints won't be added without it
