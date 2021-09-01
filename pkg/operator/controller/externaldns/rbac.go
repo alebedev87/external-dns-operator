@@ -50,8 +50,10 @@ func (r *reconciler) ensureExternalDNSClusterRole(ctx context.Context) (bool, *r
 	}
 
 	// update the cluster role
-	if _, err := r.updateExternalDNSClusterRole(ctx, current, desired); err != nil {
+	if updated, err := r.updateExternalDNSClusterRole(ctx, current, desired); err != nil {
 		return true, current, err
+	} else if updated {
+		return r.currentExternalDNSClusterRole(ctx, name)
 	}
 
 	return r.currentExternalDNSClusterRole(ctx, name)
@@ -76,11 +78,13 @@ func (r *reconciler) ensureExternalDNSClusterRoleBinding(ctx context.Context, na
 		return r.currentExternalDNSClusterRoleBinding(ctx, name)
 	}
 
-	if _, err := r.updateExternalDNSClusterRoleBinding(ctx, current, desired); err != nil {
+	if updated, err := r.updateExternalDNSClusterRoleBinding(ctx, current, desired); err != nil {
 		return true, current, err
+	} else if updated {
+		return r.currentExternalDNSClusterRoleBinding(ctx, name)
 	}
 
-	return r.currentExternalDNSClusterRoleBinding(ctx, name)
+	return true, current, nil
 }
 
 // desiredExternalDNSClusterRole returns the desired cluster role definition for externalDNS

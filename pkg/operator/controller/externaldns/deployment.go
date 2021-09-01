@@ -85,12 +85,14 @@ func (r *reconciler) ensureExternalDNSDeployment(ctx context.Context, namespace,
 	}
 
 	// update the deployment
-	if _, err := r.updateExternalDNSDeployment(ctx, current, desired); err != nil {
+	if updated, err := r.updateExternalDNSDeployment(ctx, current, desired); err != nil {
 		return true, current, err
+	} else if updated {
+		// get the deployment from API to catch up the fields added/updated by API and webhooks
+		return r.currentExternalDNSDeployment(ctx, nsName)
 	}
 
-	// get the deployment from API to catch up the fields added/updated by API and webhooks
-	return r.currentExternalDNSDeployment(ctx, nsName)
+	return true, current, nil
 }
 
 // currentExternalDNSDeployment gets the current externalDNS deployment resource.
