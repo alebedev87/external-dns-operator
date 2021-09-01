@@ -65,18 +65,18 @@ type externalDNSContainerBuilder struct {
 	provider    string
 	source      string
 	volumes     []corev1.Volume
-	secret      *corev1.Secret
+	secretName  string
 	externalDNS *operatorv1alpha1.ExternalDNS
 	counter     int
 }
 
 // newExternalDNSContainerBuilder returns an instance of container builder
-func newExternalDNSContainerBuilder(image, provider, source string, secret *corev1.Secret, volumes []corev1.Volume, externalDNS *operatorv1alpha1.ExternalDNS) *externalDNSContainerBuilder {
+func newExternalDNSContainerBuilder(image, provider, source, secretName string, volumes []corev1.Volume, externalDNS *operatorv1alpha1.ExternalDNS) *externalDNSContainerBuilder {
 	return &externalDNSContainerBuilder{
 		image:       image,
 		provider:    provider,
 		source:      source,
-		secret:      secret,
+		secretName:  secretName,
 		volumes:     volumes,
 		externalDNS: externalDNS,
 		counter:     0,
@@ -186,7 +186,7 @@ func (b *externalDNSContainerBuilder) fillProviderSpecificFields(seq int, zone s
 // fillAWSFields fills the given container with the data specific to AWS provider
 func (b *externalDNSContainerBuilder) fillAWSFields(container *corev1.Container) {
 	// don't add empty credentials environment variables if no secret was given
-	if !isSecretValid(b.secret) {
+	if len(b.secretName) == 0 {
 		return
 	}
 
@@ -196,7 +196,7 @@ func (b *externalDNSContainerBuilder) fillAWSFields(container *corev1.Container)
 			ValueFrom: &corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: b.secret.Name,
+						Name: b.secretName,
 					},
 					Key: awsAccessKeyIDKey,
 				},
@@ -207,7 +207,7 @@ func (b *externalDNSContainerBuilder) fillAWSFields(container *corev1.Container)
 			ValueFrom: &corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: b.secret.Name,
+						Name: b.secretName,
 					},
 					Key: awsAccessKeySecretKey,
 				},
@@ -265,7 +265,7 @@ func (b *externalDNSContainerBuilder) fillBlueCatFields(container *corev1.Contai
 // fillInfobloxFields fills the given container with the data specific to Infoblox provider
 func (b *externalDNSContainerBuilder) fillInfobloxFields(container *corev1.Container) {
 	// don't add empty args or env vars if secret or infoblox provider is not given
-	if !isSecretValid(b.secret) || b.externalDNS.Spec.Provider.Infoblox == nil {
+	if len(b.secretName) == 0 || b.externalDNS.Spec.Provider.Infoblox == nil {
 		return
 	}
 
@@ -287,7 +287,7 @@ func (b *externalDNSContainerBuilder) fillInfobloxFields(container *corev1.Conta
 			ValueFrom: &corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: b.secret.Name,
+						Name: b.secretName,
 					},
 					Key: infobloxWAPIUsernameKey,
 				},
@@ -298,7 +298,7 @@ func (b *externalDNSContainerBuilder) fillInfobloxFields(container *corev1.Conta
 			ValueFrom: &corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: b.secret.Name,
+						Name: b.secretName,
 					},
 					Key: infobloxWAPIPasswordKey,
 				},
@@ -312,15 +312,15 @@ func (b *externalDNSContainerBuilder) fillInfobloxFields(container *corev1.Conta
 
 // externalDNSVolumeBuilder builds the definition of the volumes for ExternalDNS POD
 type externalDNSVolumeBuilder struct {
-	provider string
-	secret   *corev1.Secret
+	provider   string
+	secretName string
 }
 
 // newExternalDNSVolumeBuilder returns an instance of volume builder
-func newExternalDNSVolumeBuilder(provider string, secret *corev1.Secret) *externalDNSVolumeBuilder {
+func newExternalDNSVolumeBuilder(provider, secretName string) *externalDNSVolumeBuilder {
 	return &externalDNSVolumeBuilder{
-		provider: provider,
-		secret:   secret,
+		provider:   provider,
+		secretName: secretName,
 	}
 }
 
@@ -342,7 +342,7 @@ func (b *externalDNSVolumeBuilder) providerSpecificVolumes() []corev1.Volume {
 
 // azureVolumes returns volumes needed for Azure provider
 func (b *externalDNSVolumeBuilder) azureVolumes() []corev1.Volume {
-	if !isSecretValid(b.secret) {
+	if len(b.secretName) == 0 {
 		return nil
 	}
 
@@ -351,7 +351,7 @@ func (b *externalDNSVolumeBuilder) azureVolumes() []corev1.Volume {
 			Name: azureConfigVolumeName,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: b.secret.Name,
+					SecretName: b.secretName,
 					Items: []corev1.KeyToPath{
 						{
 							Key:  azureConfigFileKey,
@@ -366,7 +366,7 @@ func (b *externalDNSVolumeBuilder) azureVolumes() []corev1.Volume {
 
 // bluecatVolumes returns volumes needed for Bluecat provider
 func (b *externalDNSVolumeBuilder) bluecatVolumes() []corev1.Volume {
-	if !isSecretValid(b.secret) {
+	if len(b.secretName) == 0 {
 		return nil
 	}
 
@@ -375,7 +375,7 @@ func (b *externalDNSVolumeBuilder) bluecatVolumes() []corev1.Volume {
 			Name: blueCatConfigVolumeName,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: b.secret.Name,
+					SecretName: b.secretName,
 					Items: []corev1.KeyToPath{
 						{
 							Key:  bluecatConfigFileKey,
@@ -386,9 +386,4 @@ func (b *externalDNSVolumeBuilder) bluecatVolumes() []corev1.Volume {
 			},
 		},
 	}
-}
-
-// isSecretValid returns true if the secret is usable
-func isSecretValid(secret *corev1.Secret) bool {
-	return secret != nil && len(secret.Name) > 0
 }

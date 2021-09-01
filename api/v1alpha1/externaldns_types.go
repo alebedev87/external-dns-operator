@@ -241,7 +241,7 @@ type ExternalDNSAWSProviderOptions struct {
 	//
 	// +kubebuilder:validation:Required
 	// +required
-	Credentials NamespacedSecretReference `json:"credentials"`
+	Credentials SecretReference `json:"credentials"`
 	// TODO: Additionally support access for:
 	// - kiam/kube2iam enabled clusters ("iam.amazonaws.com/role" POD's annotation to assume IAM role)
 	// - EKS clusters ("eks.amazonaws.com/role-arn" ServiceAccount's annotation to assume IAM role)
@@ -275,7 +275,7 @@ type ExternalDNSGCPProviderOptions struct {
 	//
 	// +kubebuilder:validation:Required
 	// +required
-	Credentials NamespacedSecretReference `json:"credentials"`
+	Credentials SecretReference `json:"credentials"`
 }
 
 type ExternalDNSAzureProviderOptions struct {
@@ -298,7 +298,7 @@ type ExternalDNSAzureProviderOptions struct {
 	//
 	// +kubebuilder:validation:Required
 	// +required
-	ConfigFile NamespacedSecretReference `json:"configFile"`
+	ConfigFile SecretReference `json:"configFile"`
 }
 
 type ExternalDNSBlueCatProviderOptions struct {
@@ -323,7 +323,7 @@ type ExternalDNSBlueCatProviderOptions struct {
 	//
 	// +kubebuilder:validation:Required
 	// +required
-	ConfigFile NamespacedSecretReference `json:"configFile"`
+	ConfigFile SecretReference `json:"configFile"`
 }
 
 type ExternalDNSInfobloxProviderOptions struct {
@@ -339,7 +339,7 @@ type ExternalDNSInfobloxProviderOptions struct {
 	//
 	// +kubebuilder:validation:Required
 	// +required
-	Credentials NamespacedSecretReference `json:"credentials"`
+	Credentials SecretReference `json:"credentials"`
 
 	// GridHost is the IP of the Infoblox Grid host.
 	//
@@ -363,15 +363,9 @@ type ExternalDNSInfobloxProviderOptions struct {
 	WAPIVersion string `json:"wapiVersion"`
 }
 
-// NamespacedSecretReference contains enough information to let you locate the
-// desired secret in a specific namespace.
-type NamespacedSecretReference struct {
-	// Namespace is the namespace of the secret.
-	//
-	// +kubebuilder:validation:Required
-	// +required
-	Namespace string `json:"namespace"`
-
+// SecretReference contains the information to let you locate the desired secret.
+// Secret is expected to be in the operator namespace.
+type SecretReference struct {
 	// Name is the name of the secret.
 	//
 	// +kubebuilder:validation:Required

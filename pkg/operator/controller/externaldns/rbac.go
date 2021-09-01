@@ -19,12 +19,16 @@ package externaldnscontroller
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
+
+	"github.com/google/go-cmp/cmp"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	operatorv1alpha1 "github.com/openshift/external-dns-operator/api/v1alpha1"
 	controller "github.com/openshift/external-dns-operator/pkg/operator/controller"
@@ -63,6 +67,10 @@ func (r *reconciler) ensureExternalDNSClusterRoleBinding(ctx context.Context, na
 	name := types.NamespacedName{Name: controller.ExternalDNSResourceName(externalDNS)}
 
 	desired := desiredExternalDNSClusterRoleBinding(namespace, externalDNS)
+
+	if err := controllerutil.SetControllerReference(externalDNS, desired, r.scheme); err != nil {
+		return false, nil, fmt.Errorf("failed to set the controller reference for cluster role binding: %w", err)
+	}
 
 	exists, current, err := r.currentExternalDNSClusterRoleBinding(ctx, name)
 	if err != nil {
@@ -204,18 +212,13 @@ func (r *reconciler) updateExternalDNSClusterRoleBinding(ctx context.Context, cu
 // externalDNSRoleRulesChanged returns true if the contents of the rules changed
 // order of apigroups, resources, verbs does not matter
 func externalDNSRoleRulesChanged(current, expected []rbacv1.PolicyRule) (bool, string) {
-	currentRuleMap := buildPolicyRuleMap(current)
-	expectedRuleMap := buildPolicyRuleMap(expected)
+	currentRuleMap := buildSortedPolicyRuleMap(current)
+	expectedRuleMap := buildSortedPolicyRuleMap(expected)
 
-	for resource, currVerbs := range currentRuleMap {
-		if expVerbs, found := expectedRuleMap[resource]; found {
-			if !equalStringSliceContent(currVerbs, expVerbs) {
-				return true, fmt.Sprintf("policy rule resource %q has %v vebs but expected to have %v", resource, currVerbs, expVerbs)
-			}
-		} else {
-			return true, fmt.Sprintf("not expected policy rule resource %q", resource)
-		}
+	if diff := cmp.Diff(expectedRuleMap, currentRuleMap); diff != "" {
+		return true, fmt.Sprintf("diff found in the policy rules: %s", diff)
 	}
+
 	return false, ""
 }
 
@@ -248,15 +251,18 @@ func externalDNSRoleBindingChanged(current, desired, updated *rbacv1.ClusterRole
 	return changed, fmt.Sprintf("following fields changed: %s", strings.Join(what, ","))
 }
 
-// buildPolicyRuleMap creates a map of policy rules
+// buildSortedPolicyRuleMap creates a map of policy rules
 // key: "apigroup/resource"
 // value: list of verbs
-func buildPolicyRuleMap(rules []rbacv1.PolicyRule) map[string][]string {
+func buildSortedPolicyRuleMap(rules []rbacv1.PolicyRule) map[string][]string {
 	m := map[string][]string{}
 	for _, rule := range rules {
 		for _, apiGroup := range rule.APIGroups {
 			for _, resource := range rule.Resources {
-				m[apiGroup+"/"+resource] = rule.Verbs
+				sortedVerbs := make([]string, len(rule.Verbs))
+				copy(sortedVerbs, rule.Verbs)
+				sort.Strings(sortedVerbs)
+				m[apiGroup+"/"+resource] = sortedVerbs
 			}
 		}
 	}

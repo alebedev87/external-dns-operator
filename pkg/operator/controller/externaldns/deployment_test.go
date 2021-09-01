@@ -55,13 +55,13 @@ func TestDesiredExternalDNSDeployment(t *testing.T) {
 
 	testCases := []struct {
 		name                    string
-		inputSecret             *corev1.Secret
+		inputSecretName         string
 		inputExternalDNS        *operatorv1alpha1.ExternalDNS
 		expectedTemplatePodSpec corev1.PodSpec
 	}{
 		{
 			name:             "Nominal AWS",
-			inputSecret:      testAWSSecret(),
+			inputSecretName:  "awssecret",
 			inputExternalDNS: testAWSExternalDNS(),
 			expectedTemplatePodSpec: corev1.PodSpec{
 				ServiceAccountName: name,
@@ -127,7 +127,6 @@ func TestDesiredExternalDNSDeployment(t *testing.T) {
 		},
 		{
 			name:             "No credentials AWS",
-			inputSecret:      &corev1.Secret{},
 			inputExternalDNS: testAWSExternalDNS(),
 			expectedTemplatePodSpec: corev1.PodSpec{
 				ServiceAccountName: name,
@@ -169,7 +168,7 @@ func TestDesiredExternalDNSDeployment(t *testing.T) {
 		},
 		{
 			name:             "Nominal Azure",
-			inputSecret:      testAzureSecret(),
+			inputSecretName:  "azuresecret",
 			inputExternalDNS: testAzureExternalDNS(),
 			expectedTemplatePodSpec: corev1.PodSpec{
 				ServiceAccountName: name,
@@ -235,7 +234,6 @@ func TestDesiredExternalDNSDeployment(t *testing.T) {
 		},
 		{
 			name:             "No credentials Azure",
-			inputSecret:      &corev1.Secret{},
 			inputExternalDNS: testAzureExternalDNS(),
 			expectedTemplatePodSpec: corev1.PodSpec{
 				ServiceAccountName: name,
@@ -277,7 +275,6 @@ func TestDesiredExternalDNSDeployment(t *testing.T) {
 		},
 		{
 			name:             "Nominal GCP",
-			inputSecret:      &corev1.Secret{},
 			inputExternalDNS: testGCPExternalDNS(),
 			expectedTemplatePodSpec: corev1.PodSpec{
 				ServiceAccountName: name,
@@ -320,7 +317,6 @@ func TestDesiredExternalDNSDeployment(t *testing.T) {
 		},
 		{
 			name:             "No project GCP",
-			inputSecret:      &corev1.Secret{},
 			inputExternalDNS: testGCPExternalDNSNoProject(),
 			expectedTemplatePodSpec: corev1.PodSpec{
 				ServiceAccountName: name,
@@ -362,7 +358,7 @@ func TestDesiredExternalDNSDeployment(t *testing.T) {
 		},
 		{
 			name:             "Nominal Bluecat",
-			inputSecret:      testBlueCatSecret(),
+			inputSecretName:  "bluecatsecret",
 			inputExternalDNS: testBlueCatExternalDNS(),
 			expectedTemplatePodSpec: corev1.PodSpec{
 				ServiceAccountName: name,
@@ -428,7 +424,6 @@ func TestDesiredExternalDNSDeployment(t *testing.T) {
 		},
 		{
 			name:             "No credentials Bluecat",
-			inputSecret:      &corev1.Secret{},
 			inputExternalDNS: testBlueCatExternalDNS(),
 			expectedTemplatePodSpec: corev1.PodSpec{
 				ServiceAccountName: name,
@@ -470,7 +465,7 @@ func TestDesiredExternalDNSDeployment(t *testing.T) {
 		},
 		{
 			name:             "Nominal Infoblox",
-			inputSecret:      testInfobloxSecret(),
+			inputSecretName:  "infobloxsecret",
 			inputExternalDNS: testInfobloxExternalDNS(),
 			expectedTemplatePodSpec: corev1.PodSpec{
 				ServiceAccountName: name,
@@ -539,7 +534,6 @@ func TestDesiredExternalDNSDeployment(t *testing.T) {
 		},
 		{
 			name:             "No credentials Infoblox",
-			inputSecret:      &corev1.Secret{},
 			inputExternalDNS: testInfobloxExternalDNS(),
 			expectedTemplatePodSpec: corev1.PodSpec{
 				ServiceAccountName: name,
@@ -581,7 +575,6 @@ func TestDesiredExternalDNSDeployment(t *testing.T) {
 		},
 		{
 			name:             "Hostname allowed, no clusterip type",
-			inputSecret:      &corev1.Secret{},
 			inputExternalDNS: testAWSExternalDNSHostnameAllow(),
 			expectedTemplatePodSpec: corev1.PodSpec{
 				ServiceAccountName: name,
@@ -620,7 +613,6 @@ func TestDesiredExternalDNSDeployment(t *testing.T) {
 		},
 		{
 			name:             "Many zones",
-			inputSecret:      &corev1.Secret{},
 			inputExternalDNS: testAWSExternalDNSZones([]string{publicZone, privateZone}),
 			expectedTemplatePodSpec: corev1.PodSpec{
 				ServiceAccountName: name,
@@ -683,7 +675,6 @@ func TestDesiredExternalDNSDeployment(t *testing.T) {
 		},
 		{
 			name:             "Annotation filter",
-			inputSecret:      &corev1.Secret{},
 			inputExternalDNS: testAWSExternalDNSAnnotationFilter(map[string]string{"testannotation": "yes"}),
 			expectedTemplatePodSpec: corev1.PodSpec{
 				ServiceAccountName: name,
@@ -728,7 +719,7 @@ func TestDesiredExternalDNSDeployment(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			depl, err := desiredExternalDNSDeployment(namespace, image, serviceAccount, tc.inputSecret, tc.inputExternalDNS)
+			depl, err := desiredExternalDNSDeployment(namespace, image, tc.inputSecretName, serviceAccount, tc.inputExternalDNS)
 			if err != nil {
 				t.Errorf("expected no error from calling desiredExternalDNSDeployment, but received %v", err)
 			}
@@ -996,54 +987,4 @@ func testInfobloxExternalDNS() *operatorv1alpha1.ExternalDNS {
 		WAPIVersion: "2.3.1",
 	}
 	return extdns
-}
-
-func testAWSSecret() *corev1.Secret {
-	return &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "awssecret",
-			Namespace: namespace,
-		},
-		Data: map[string][]byte{
-			"aws_access_key_id":     []byte("testid"),
-			"aws_secret_access_key": []byte("testsecret"),
-		},
-	}
-}
-
-func testAzureSecret() *corev1.Secret {
-	return &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "azuresecret",
-			Namespace: namespace,
-		},
-		Data: map[string][]byte{
-			"azure.json": []byte("{}"),
-		},
-	}
-}
-
-func testBlueCatSecret() *corev1.Secret {
-	return &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "bluecatsecret",
-			Namespace: namespace,
-		},
-		Data: map[string][]byte{
-			"bluecat.json": []byte("{}"),
-		},
-	}
-}
-
-func testInfobloxSecret() *corev1.Secret {
-	return &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "infobloxsecret",
-			Namespace: namespace,
-		},
-		Data: map[string][]byte{
-			"EXTERNAL_DNS_INFOBLOX_WAPI_USERNAME": []byte("testuser"),
-			"EXTERNAL_DNS_INFOBLOX_WAPI_PASSWORD": []byte("testpwd"),
-		},
-	}
 }

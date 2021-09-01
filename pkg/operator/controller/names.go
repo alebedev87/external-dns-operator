@@ -21,21 +21,41 @@ import (
 	"hash"
 	"hash/fnv"
 
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/rand"
 
 	operatorv1alpha1 "github.com/openshift/external-dns-operator/api/v1alpha1"
+	operatorconfig "github.com/openshift/external-dns-operator/pkg/operator/config"
 )
 
 const (
+	// ExternalDNSBaseName is a universal base name for any ExternalDNS instance
 	ExternalDNSBaseName = "external-dns"
 )
 
+// ExternalDNSResourceName returns the name of ExternalDNS instance.
+// It can be used for ExternalDNS resources related to this instance: deployment, servicename, etc.
 func ExternalDNSResourceName(externalDNS *operatorv1alpha1.ExternalDNS) string {
 	return ExternalDNSBaseName + "-" + externalDNS.Name
 }
 
+// ExternalDNSContainerName returns a name for the container of ExternalDNS deployment.
+// The name will contain the hashed zone given as parameter.
 func ExternalDNSContainerName(zone string) string {
 	return ExternalDNSBaseName + "-" + hashString(zone)
+}
+
+// ExternalDNSDestCredentialsSecretName returns the namespaced name of the destination (operand) credentials secret
+func ExternalDNSDestCredentialsSecretName(operandNamespace, extdnsName string) types.NamespacedName {
+	return types.NamespacedName{
+		Namespace: operandNamespace,
+		Name:      ExternalDNSBaseName + "-credentials-" + extdnsName,
+	}
+}
+
+func ExternalDNSCredentialsSourceNamespace(cfg *operatorconfig.Config) string {
+	// TODO: use openshift-config namespace for OpenShift
+	return cfg.OperatorNamespace
 }
 
 func hashString(str string) string {

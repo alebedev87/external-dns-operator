@@ -113,12 +113,8 @@ spec:
                           name:
                             description: Name is the name of the secret.
                             type: string
-                          namespace:
-                            description: Namespace is the namespace of the secret.
-                            type: string
                         required:
                         - name
-                        - namespace
                         type: object
                     required:
                     - credentials
@@ -141,12 +137,8 @@ spec:
                           name:
                             description: Name is the name of the secret.
                             type: string
-                          namespace:
-                            description: Namespace is the namespace of the secret.
-                            type: string
                         required:
                         - name
-                        - namespace
                         type: object
                     required:
                     - configFile
@@ -170,12 +162,8 @@ spec:
                           name:
                             description: Name is the name of the secret.
                             type: string
-                          namespace:
-                            description: Namespace is the namespace of the secret.
-                            type: string
                         required:
                         - name
-                        - namespace
                         type: object
                     required:
                     - configFile
@@ -199,12 +187,8 @@ spec:
                           name:
                             description: Name is the name of the secret.
                             type: string
-                          namespace:
-                            description: Namespace is the namespace of the secret.
-                            type: string
                         required:
                         - name
-                        - namespace
                         type: object
                       project:
                         description: Project is the GCP project to use for creating
@@ -229,12 +213,8 @@ spec:
                           name:
                             description: Name is the name of the secret.
                             type: string
-                          namespace:
-                            description: Namespace is the namespace of the secret.
-                            type: string
                         required:
                         - name
-                        - namespace
                         type: object
                       gridHost:
                         default: 127.0.0.1

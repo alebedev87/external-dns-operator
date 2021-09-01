@@ -18,8 +18,10 @@ package externaldnscontroller
 
 import (
 	"context"
-	"reflect"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,10 +40,10 @@ const (
 var (
 	testExternalDNS = &operatorv1alpha1.ExternalDNS{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "testexternaldns",
-			Namespace: testNamespace,
+			Name: "testexternaldns",
 		},
 	}
+	trueVar = true
 )
 
 func TestEnsureExternalDNSClusterRole(t *testing.T) {
@@ -50,12 +52,17 @@ func TestEnsureExternalDNSClusterRole(t *testing.T) {
 		existingObjects []runtime.Object
 		expectedExist   bool
 		expectedRole    rbacv1.ClusterRole
+		errExpected     bool
 	}{
 		{
 			name:            "Does not exist",
 			existingObjects: []runtime.Object{},
 			expectedExist:   true,
 			expectedRole: rbacv1.ClusterRole{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ClusterRole",
+					APIVersion: "rbac.authorization.k8s.io/v1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: controller.ExternalDNSBaseName,
 				},
@@ -77,6 +84,10 @@ func TestEnsureExternalDNSClusterRole(t *testing.T) {
 			name: "Exists and as expected",
 			existingObjects: []runtime.Object{
 				&rbacv1.ClusterRole{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "ClusterRole",
+						APIVersion: "rbac.authorization.k8s.io/v1",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name: controller.ExternalDNSBaseName,
 					},
@@ -96,6 +107,10 @@ func TestEnsureExternalDNSClusterRole(t *testing.T) {
 			},
 			expectedExist: true,
 			expectedRole: rbacv1.ClusterRole{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ClusterRole",
+					APIVersion: "rbac.authorization.k8s.io/v1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: controller.ExternalDNSBaseName,
 				},
@@ -117,6 +132,10 @@ func TestEnsureExternalDNSClusterRole(t *testing.T) {
 			name: "Exists and needs to be updated",
 			existingObjects: []runtime.Object{
 				&rbacv1.ClusterRole{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "ClusterRole",
+						APIVersion: "rbac.authorization.k8s.io/v1",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name: controller.ExternalDNSBaseName,
 					},
@@ -136,6 +155,10 @@ func TestEnsureExternalDNSClusterRole(t *testing.T) {
 			},
 			expectedExist: true,
 			expectedRole: rbacv1.ClusterRole{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ClusterRole",
+					APIVersion: "rbac.authorization.k8s.io/v1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: controller.ExternalDNSBaseName,
 				},
@@ -160,14 +183,26 @@ func TestEnsureExternalDNSClusterRole(t *testing.T) {
 			cl := fake.NewFakeClient(tc.existingObjects...)
 			r := &reconciler{
 				client: cl,
+				scheme: testScheme,
 				log:    zap.New(zap.UseDevMode(true)),
 			}
-			gotExist, gotRole, _ := r.ensureExternalDNSClusterRole(context.TODO())
+			gotExist, gotRole, err := r.ensureExternalDNSClusterRole(context.TODO())
+			if err != nil {
+				if !tc.errExpected {
+					t.Fatalf("unexpected error received: %v", err)
+				}
+				return
+			}
+			if tc.errExpected {
+				t.Fatalf("Error expected but wasn't received")
+			}
+
 			if gotExist != tc.expectedExist {
 				t.Errorf("expected cluster roles's exist to be %t, got %t", tc.expectedExist, gotExist)
 			}
-			if reflect.DeepEqual(*gotRole, tc.expectedRole) {
-				t.Errorf("expected cluster role %v, got %v", tc.expectedRole, gotRole)
+			diffOpts := cmpopts.IgnoreFields(rbacv1.ClusterRole{}, "ResourceVersion")
+			if diff := cmp.Diff(tc.expectedRole, *gotRole, diffOpts); diff != "" {
+				t.Errorf("unexpected cluster role (-want +got):\n%s", diff)
 			}
 		})
 	}
@@ -292,14 +327,28 @@ func TestEnsureExternalDNSClusterRoleBinding(t *testing.T) {
 		existingObjects     []runtime.Object
 		expectedExist       bool
 		expectedRoleBinding rbacv1.ClusterRoleBinding
+		errExpected         bool
 	}{
 		{
 			name:            "Does not exist",
 			existingObjects: []runtime.Object{},
 			expectedExist:   true,
 			expectedRoleBinding: rbacv1.ClusterRoleBinding{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ClusterRoleBinding",
+					APIVersion: "rbac.authorization.k8s.io/v1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: controller.ExternalDNSResourceName(testExternalDNS),
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion:         operatorv1alpha1.GroupVersion.String(),
+							Kind:               "ExternalDNS",
+							Name:               testExternalDNS.Name,
+							Controller:         &trueVar,
+							BlockOwnerDeletion: &trueVar,
+						},
+					},
 				},
 				RoleRef: rbacv1.RoleRef{
 					APIGroup: "rbac.authorization.k8s.io",
@@ -319,8 +368,21 @@ func TestEnsureExternalDNSClusterRoleBinding(t *testing.T) {
 			name: "Exists and as expected",
 			existingObjects: []runtime.Object{
 				&rbacv1.ClusterRoleBinding{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "ClusterRoleBinding",
+						APIVersion: "rbac.authorization.k8s.io/v1",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name: controller.ExternalDNSResourceName(testExternalDNS),
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								APIVersion:         operatorv1alpha1.GroupVersion.String(),
+								Kind:               "ExternalDNS",
+								Name:               testExternalDNS.Name,
+								Controller:         &trueVar,
+								BlockOwnerDeletion: &trueVar,
+							},
+						},
 					},
 					RoleRef: rbacv1.RoleRef{
 						APIGroup: "rbac.authorization.k8s.io",
@@ -338,8 +400,21 @@ func TestEnsureExternalDNSClusterRoleBinding(t *testing.T) {
 			},
 			expectedExist: true,
 			expectedRoleBinding: rbacv1.ClusterRoleBinding{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ClusterRoleBinding",
+					APIVersion: "rbac.authorization.k8s.io/v1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: controller.ExternalDNSResourceName(testExternalDNS),
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion:         operatorv1alpha1.GroupVersion.String(),
+							Kind:               "ExternalDNS",
+							Name:               testExternalDNS.Name,
+							Controller:         &trueVar,
+							BlockOwnerDeletion: &trueVar,
+						},
+					},
 				},
 				RoleRef: rbacv1.RoleRef{
 					APIGroup: "rbac.authorization.k8s.io",
@@ -359,6 +434,10 @@ func TestEnsureExternalDNSClusterRoleBinding(t *testing.T) {
 			name: "Exists and needs to be updated",
 			existingObjects: []runtime.Object{
 				&rbacv1.ClusterRoleBinding{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "ClusterRoleBinding",
+						APIVersion: "rbac.authorization.k8s.io/v1",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name: controller.ExternalDNSResourceName(testExternalDNS),
 					},
@@ -378,6 +457,10 @@ func TestEnsureExternalDNSClusterRoleBinding(t *testing.T) {
 			},
 			expectedExist: true,
 			expectedRoleBinding: rbacv1.ClusterRoleBinding{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ClusterRoleBinding",
+					APIVersion: "rbac.authorization.k8s.io/v1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: controller.ExternalDNSResourceName(testExternalDNS),
 				},
@@ -402,14 +485,25 @@ func TestEnsureExternalDNSClusterRoleBinding(t *testing.T) {
 			cl := fake.NewFakeClient(tc.existingObjects...)
 			r := &reconciler{
 				client: cl,
+				scheme: testScheme,
 				log:    zap.New(zap.UseDevMode(true)),
 			}
-			gotExist, gotRoleBinding, _ := r.ensureExternalDNSClusterRoleBinding(context.TODO(), testNamespace, testExternalDNS)
+			gotExist, gotRoleBinding, err := r.ensureExternalDNSClusterRoleBinding(context.TODO(), testNamespace, testExternalDNS)
+			if err != nil {
+				if !tc.errExpected {
+					t.Fatalf("unexpected error received: %v", err)
+				}
+				return
+			}
+			if tc.errExpected {
+				t.Fatalf("Error expected but wasn't received")
+			}
 			if gotExist != tc.expectedExist {
 				t.Errorf("expected cluster roles binding's exist to be %t, got %t", tc.expectedExist, gotExist)
 			}
-			if reflect.DeepEqual(*gotRoleBinding, tc.expectedRoleBinding) {
-				t.Errorf("expected cluster role binding %v, got %v", tc.expectedRoleBinding, gotRoleBinding)
+			diffOpts := cmpopts.IgnoreFields(rbacv1.ClusterRoleBinding{}, "ResourceVersion")
+			if diff := cmp.Diff(tc.expectedRoleBinding, *gotRoleBinding, diffOpts); diff != "" {
+				t.Errorf("unexpected cluster role binding (-want +got):\n%s", diff)
 			}
 		})
 	}
