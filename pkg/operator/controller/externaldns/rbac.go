@@ -31,7 +31,8 @@ import (
 )
 
 // ensureExternalDNSClusterRole ensures that the externalDNS cluster role exists.
-// Returns a boolean if the cluster role exists, and an error when relevant.
+// Returns a boolean if the cluster role exists, its current state if it exists
+// and an error if it cannot be created to updated.
 func (r *reconciler) ensureExternalDNSClusterRole(ctx context.Context) (bool, *rbacv1.ClusterRole, error) {
 	name := types.NamespacedName{Name: controller.ExternalDNSBaseName}
 
@@ -223,8 +224,9 @@ func externalDNSRoleRulesChanged(current, expected []rbacv1.PolicyRule) (bool, s
 	return false, ""
 }
 
-// externalDNSRoleBindingChanged returns true if role or subject changed
-// updated cluster role binding is updated with the desired values
+// externalDNSRoleBindingChanged returns true if the role binding changed,
+// second output value is the reason of the change (role/subject).
+// Updated input parameter is set with the desired values in case the role binding changed.
 func externalDNSRoleBindingChanged(current, desired, updated *rbacv1.ClusterRoleBinding) (bool, string) {
 	changed := false
 	what := []string{}

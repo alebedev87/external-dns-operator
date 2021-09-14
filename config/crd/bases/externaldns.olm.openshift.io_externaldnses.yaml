@@ -357,7 +357,8 @@ spec:
                       set to Ignore. \n Provided template should follow the syntax
                       defined for text/template Go package, see https://pkg.go.dev/text/template.
                       Annotations inside the template correspond to the definition
-                      of the source data structure."
+                      of the source data structure. Example: \"{{.Name}}.example.com\"
+                      would be expanded to \"myservice.example.com\" for service source"
                     type: string
                   hostnameAnnotation:
                     default: Ignore

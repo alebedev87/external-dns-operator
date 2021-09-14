@@ -418,6 +418,8 @@ type ExternalDNSSource struct {
 	// Provided template should follow the syntax defined for text/template Go package,
 	// see https://pkg.go.dev/text/template.
 	// Annotations inside the template correspond to the definition of the source data structure.
+	// Example: "{{.Name}}.example.com" would be expanded to "myservice.example.com" for service source
+	//
 	// +kubebuilder:validation:Optional
 	// +optional
 	FQDNTemplate string `json:"fqdnTemplate"`

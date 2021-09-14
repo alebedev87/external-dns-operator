@@ -17,17 +17,3 @@ This Operator is in the early stages of implementation. For the time being, plea
 2. Make sure to uncomment the `image` in `config/manager/kustomization.yaml` and set it to the operator image you pushed
 3. Run `oc apply -k config/default`
 4. Now you can deploy an instance of ExternalDNS, run `oc apply -k config/samples`
-
-## TODO
-
-### 4.10
-- Complete deployment logic:
-    - Manully created credentials (without `credentialsrequest.cloudcredential.openshift.io`)
-    - CR statuses (at least Available)
-- Finalization/ownership logic
-    - Secondary resources must be deleted when the primary one (ExternalDNS CR) is deleted
-- Domain filtering support
-
-### > 4.10
-- Metrics
-- CRD source

@@ -38,8 +38,7 @@ const (
 var (
 	testExternalDNS = &operatorv1alpha1.ExternalDNS{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "testexternaldns",
-			Namespace: testNamespace,
+			Name: "testexternaldns",
 		},
 	}
 )
