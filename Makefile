@@ -58,6 +58,7 @@ vet: ## Run go vet against code.
 
 test: manifests generate fmt vet ## Run unit tests
 		go test \
+		-race \
 		-covermode=atomic \
 		-coverprofile coverage.out \
 		./...
