@@ -1,0 +1,23 @@
+apiVersion: externaldns.olm.openshift.io/v1alpha1
+kind: ExternalDNS
+metadata:
+  name: sample
+spec:
+  provider:
+    type: AWS
+    aws:
+      credentials:
+        name: aws-access-key
+  zones:
+  - "Z075368919KV2GWDBERKV"
+  source:
+    type: Service
+    service:
+      serviceType:
+      - LoadBalancer
+      - ClusterIP
+      - NodePort
+    annotationFilter:
+      external-dns.mydomain.org/publish: "yes"
+    fqdnTemplate:
+    - "{{.Name}}.alebedev-dev.devcluster.openshift.com"
