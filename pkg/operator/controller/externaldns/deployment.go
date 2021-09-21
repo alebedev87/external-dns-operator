@@ -69,8 +69,9 @@ var sourceStringTable = map[operatorv1alpha1.ExternalDNSSourceType]string{
 func (r *reconciler) ensureExternalDNSDeployment(ctx context.Context, namespace, image string, serviceAccount *corev1.ServiceAccount, externalDNS *operatorv1alpha1.ExternalDNS) (bool, *appsv1.Deployment, error) {
 	nsName := types.NamespacedName{Namespace: namespace, Name: controller.ExternalDNSResourceName(externalDNS)}
 
-	secret, err := r.extractCredentialsSecret(ctx, externalDNS)
-	if err != nil {
+	secretName := externalDNSCredentialsSecretName(externalDNS)
+	secret := &corev1.Secret{}
+	if err := r.client.Get(ctx, secretName, secret); err != nil {
 		return false, nil, fmt.Errorf("failed to extract credentials secret: %w", err)
 	}
 
@@ -112,16 +113,6 @@ func (r *reconciler) currentExternalDNSDeployment(ctx context.Context, nsName ty
 		return false, nil, err
 	}
 	return true, depl, nil
-}
-
-// extractCredentialsSecret retieves the contents of the credentials' secret
-func (r *reconciler) extractCredentialsSecret(ctx context.Context, externalDNS *operatorv1alpha1.ExternalDNS) (*corev1.Secret, error) {
-	secretName := externalDNSCredentialsSecretName(externalDNS)
-	secret := &corev1.Secret{}
-	if err := r.client.Get(ctx, secretName, secret); err != nil {
-		return nil, err
-	}
-	return secret, nil
 }
 
 // desiredExternalDNSDeployment returns the desired deployment resource.

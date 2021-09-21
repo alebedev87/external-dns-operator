@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -122,8 +123,6 @@ func TestDesiredExternalDNSDeployment(t *testing.T) {
 								},
 							},
 						},
-						TerminationMessagePolicy: corev1.TerminationMessageFallbackToLogsOnError,
-						ImagePullPolicy:          corev1.PullIfNotPresent,
 					},
 				},
 			},
@@ -167,8 +166,6 @@ func TestDesiredExternalDNSDeployment(t *testing.T) {
 							"--ignore-hostname-annotation",
 							"--fqdn-template={{.Name}}.test.com",
 						},
-						TerminationMessagePolicy: "FallbackToLogsOnError",
-						ImagePullPolicy:          "IfNotPresent",
 					},
 				},
 			},
@@ -236,8 +233,6 @@ func TestDesiredExternalDNSDeployment(t *testing.T) {
 								MountPath: "/etc/kubernetes",
 							},
 						},
-						TerminationMessagePolicy: "FallbackToLogsOnError",
-						ImagePullPolicy:          "IfNotPresent",
 					},
 				},
 			},
@@ -281,8 +276,6 @@ func TestDesiredExternalDNSDeployment(t *testing.T) {
 							"--ignore-hostname-annotation",
 							"--fqdn-template={{.Name}}.test.com",
 						},
-						TerminationMessagePolicy: "FallbackToLogsOnError",
-						ImagePullPolicy:          "IfNotPresent",
 					},
 				},
 			},
@@ -356,8 +349,6 @@ func TestDesiredExternalDNSDeployment(t *testing.T) {
 								MountPath: "/etc/kubernetes",
 							},
 						},
-						TerminationMessagePolicy: "FallbackToLogsOnError",
-						ImagePullPolicy:          "IfNotPresent",
 					},
 				},
 			},
@@ -401,8 +392,6 @@ func TestDesiredExternalDNSDeployment(t *testing.T) {
 							"--ignore-hostname-annotation",
 							"--fqdn-template={{.Name}}.test.com",
 						},
-						TerminationMessagePolicy: "FallbackToLogsOnError",
-						ImagePullPolicy:          "IfNotPresent",
 					},
 				},
 			},
@@ -470,8 +459,6 @@ func TestDesiredExternalDNSDeployment(t *testing.T) {
 								MountPath: "/etc/kubernetes",
 							},
 						},
-						TerminationMessagePolicy: "FallbackToLogsOnError",
-						ImagePullPolicy:          "IfNotPresent",
 					},
 				},
 			},
@@ -515,8 +502,6 @@ func TestDesiredExternalDNSDeployment(t *testing.T) {
 							"--ignore-hostname-annotation",
 							"--fqdn-template={{.Name}}.test.com",
 						},
-						TerminationMessagePolicy: "FallbackToLogsOnError",
-						ImagePullPolicy:          "IfNotPresent",
 					},
 				},
 			},
@@ -587,8 +572,6 @@ func TestDesiredExternalDNSDeployment(t *testing.T) {
 								},
 							},
 						},
-						TerminationMessagePolicy: "FallbackToLogsOnError",
-						ImagePullPolicy:          "IfNotPresent",
 					},
 				},
 			},
@@ -632,8 +615,6 @@ func TestDesiredExternalDNSDeployment(t *testing.T) {
 							"--ignore-hostname-annotation",
 							"--fqdn-template={{.Name}}.test.com",
 						},
-						TerminationMessagePolicy: "FallbackToLogsOnError",
-						ImagePullPolicy:          "IfNotPresent",
 					},
 				},
 			},
@@ -671,8 +652,6 @@ func TestDesiredExternalDNSDeployment(t *testing.T) {
 							"--namespace=testns",
 							"--service-type-filter=LoadBalancer",
 						},
-						TerminationMessagePolicy: "FallbackToLogsOnError",
-						ImagePullPolicy:          "IfNotPresent",
 					},
 				},
 			},
@@ -716,8 +695,6 @@ func TestDesiredExternalDNSDeployment(t *testing.T) {
 							"--ignore-hostname-annotation",
 							"--fqdn-template={{.Name}}.test.com",
 						},
-						TerminationMessagePolicy: "FallbackToLogsOnError",
-						ImagePullPolicy:          "IfNotPresent",
 					},
 					{
 						Name:  "external-dns-n656hcdh5d9hf6q",
@@ -740,8 +717,6 @@ func TestDesiredExternalDNSDeployment(t *testing.T) {
 							"--ignore-hostname-annotation",
 							"--fqdn-template={{.Name}}.test.com",
 						},
-						TerminationMessagePolicy: "FallbackToLogsOnError",
-						ImagePullPolicy:          "IfNotPresent",
 					},
 				},
 			},
@@ -786,8 +761,6 @@ func TestDesiredExternalDNSDeployment(t *testing.T) {
 							"--ignore-hostname-annotation",
 							"--fqdn-template={{.Name}}.test.com",
 						},
-						TerminationMessagePolicy: "FallbackToLogsOnError",
-						ImagePullPolicy:          "IfNotPresent",
 					},
 				},
 			},
@@ -800,7 +773,8 @@ func TestDesiredExternalDNSDeployment(t *testing.T) {
 			if err != nil {
 				t.Errorf("expected no error from calling desiredExternalDNSDeployment, but received %v", err)
 			}
-			if diff := cmp.Diff(tc.expectedTemplatePodSpec, depl.Spec.Template.Spec); diff != "" {
+			diffOpts := cmpopts.IgnoreFields(corev1.Container{}, "TerminationMessagePolicy", "ImagePullPolicy")
+			if diff := cmp.Diff(tc.expectedTemplatePodSpec, depl.Spec.Template.Spec, diffOpts); diff != "" {
 				t.Errorf("wrong desired POD spec (-want +got):\n%s", diff)
 			}
 		})

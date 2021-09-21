@@ -28,7 +28,7 @@ import (
 
 const (
 	defaultMetricsAddress   = "127.0.0.1"
-	defaultOwnerPrefix      = "externaldns"
+	defaultOwnerPrefix      = "external-dns"
 	defaultMetricsStartPort = 7979
 	//
 	// AWS
@@ -104,7 +104,7 @@ func (b *externalDNSContainerBuilder) build(zone string) *corev1.Container {
 func (b *externalDNSContainerBuilder) buildSeq(seq int, zone string) *corev1.Container {
 	container := b.defaultContainer(controller.ExternalDNSContainerName(zone))
 	b.fillProviderAgnosticFields(seq, zone, container)
-	b.fillProviderSpecificFields(seq, zone, container)
+	b.fillProviderSpecificFields(container)
 	return container
 }
 
@@ -174,7 +174,7 @@ func (b *externalDNSContainerBuilder) fillProviderAgnosticFields(seq int, zone s
 }
 
 // fillProviderSpecificFields fills the fields specific to the provider of given ExternalDNS
-func (b *externalDNSContainerBuilder) fillProviderSpecificFields(seq int, zone string, container *corev1.Container) {
+func (b *externalDNSContainerBuilder) fillProviderSpecificFields(container *corev1.Container) {
 	switch b.provider {
 	case externalDNSProviderTypeAWS:
 		b.fillAWSFields(container)
