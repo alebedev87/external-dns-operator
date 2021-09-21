@@ -21,10 +21,10 @@ This Operator is in the early stages of implementation. For the time being, plea
         ```bash
         $ kubectl create namespace external-dns
         $ kubectl -n external-dns create secret generic aws-access-key \
-                --from-literal=aws_access_key_id=${ACCESS_KEY_ID}
+                --from-literal=aws_access_key_id=${ACCESS_KEY_ID} \
                 --from-literal=aws_secret_access_key=${ACCESS_SECRET_KEY}
         ```
-        *Note*: other provider's options can be found in `api/v1alpha1/externaldns_types.go`, i.e. `ExternalDNSAWSProviderOptions` structure for AWS
+        *Note*: other provider options can be found in `api/v1alpha1/externaldns_types.go`, e.g. the `ExternalDNSAWSProviderOptions` structure for AWS.
     * Run `kubectl apply -k config/samples/aws` for AWS    
         *Note*: other providers available in `config/samples/`
 
