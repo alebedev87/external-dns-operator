@@ -8,8 +8,11 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"os/signal"
 	"strconv"
 	"strings"
+	"sync"
+	"syscall"
 	"testing"
 	"time"
 
@@ -52,6 +55,7 @@ var (
 	helper           providerTestHelper
 	hostedZoneDomain = baseZoneDomain
 	operandVersion   = "v0.10.1"
+	once             sync.Once
 )
 
 func init() {
@@ -68,6 +72,21 @@ func init() {
 	if err := routev1.Install(scheme); err != nil {
 		panic(err)
 	}
+}
+
+func teardown() {
+	if helper != nil && len(hostedZoneID) > 0 {
+		fmt.Printf("Deleting hosted zone: %s\n", hostedZoneDomain)
+		if err := helper.deleteHostedZone(hostedZoneID, hostedZoneDomain); err != nil {
+			fmt.Printf("Failed to delete hosted zone %q: %v\n", hostedZoneID, err)
+		}
+	} else {
+		fmt.Println("No hosted zone to delete")
+	}
+}
+
+func teardownonce() {
+	once.Do(teardown)
 }
 
 func initKubeClient() error {
@@ -142,19 +161,21 @@ func TestMain(m *testing.M) {
 		fmt.Printf("Failed to created hosted zone for domain %s: %v\n", hostedZoneDomain, err)
 		os.Exit(1)
 	}
+	// at interruption (Ctrl-C, SIGTERM)
+	go setupSignalHandler()
 
 	exitStatus := m.Run()
 
-	fmt.Printf("Deleting hosted zone: %s\n", hostedZoneDomain)
-	err = helper.deleteHostedZone(hostedZoneID, hostedZoneDomain)
-	if err != nil {
-		fmt.Printf("Failed to delete hosted zone %s: %v\n", hostedZoneID, err)
-		os.Exit(1)
-	}
+	// at the end of all tests (success or failure)
+	teardownonce()
+
 	os.Exit(exitStatus)
 }
 
 func TestOperatorAvailable(t *testing.T) {
+	// at panic time (timeout or any other)
+	t.Cleanup(teardownonce)
+
 	expected := []appsv1.DeploymentCondition{
 		{Type: appsv1.DeploymentAvailable, Status: corev1.ConditionTrue},
 	}
@@ -164,6 +185,8 @@ func TestOperatorAvailable(t *testing.T) {
 }
 
 func TestExternalDNSWithRoute(t *testing.T) {
+	t.Cleanup(teardownonce)
+
 	t.Log("Ensuring test namespace")
 	err := kubeClient.Create(context.TODO(), &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testNamespace}})
 	if err != nil && !errors.IsAlreadyExists(err) {
@@ -245,6 +268,8 @@ func TestExternalDNSWithRoute(t *testing.T) {
 }
 
 func TestExternalDNSRecordLifecycle(t *testing.T) {
+	t.Cleanup(teardownonce)
+
 	t.Log("Ensuring test namespace")
 	err := kubeClient.Create(context.TODO(), &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testNamespace}})
 	if err != nil && !errors.IsAlreadyExists(err) {
@@ -364,6 +389,7 @@ func customResolver(nameserver string) *net.Resolver {
 	}
 }
 
+<<<<<<< HEAD
 // Test to verify the ExternalDNS should create the CNAME record for the OpenshiftRoute
 // with multiple ingress controller deployed in Openshift.
 // Route's host should resolve to the canonical name of the specified ingress controller.
@@ -471,4 +497,12 @@ func fetchRouterCanonicalHostname(t *testing.T, routeName types.NamespacedName) 
 		return "", err
 	}
 	return canonicalName, nil
+}
+
+func setupSignalHandler() {
+	sigCh := make(chan os.Signal)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
+	fmt.Println("Received signal:", <-sigCh)
+	teardownonce()
+	os.Exit(1)
 }

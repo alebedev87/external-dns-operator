@@ -43,6 +43,8 @@ GOLANGCI_LINT_VERSION=v1.43.0
 
 COMMIT ?= $(shell git rev-parse HEAD)
 SHORTCOMMIT ?= $(shell git rev-parse --short HEAD)
+E2E_OPERATOR_TEST = ./test/e2e/operator_test.go
+E2E_NUMBER_OPERATOR_TESTS = $(shell grep -Pc 'func\s+Test.*\(.*\*testing.T\s*\)' $(E2E_OPERATOR_TEST))
 GOBUILD_VERSION_ARGS = -ldflags "-X $(PACKAGE)/pkg/version.SHORTCOMMIT=$(SHORTCOMMIT) -X $(PACKAGE)/pkg/version.COMMIT=$(COMMIT)"
 
 E2E_TIMEOUT ?= 1h
@@ -88,6 +90,7 @@ test: manifests generate fmt vet ## Run tests.
 test-e2e:
 	go test \
 	$(GOBUILD_VERSION_ARGS) \
+	-ldflags "-X $(PACKAGE)/test/e2e/NUMBER_OPERATOR_TESTS=$(E2E_NUMBER_OPERATOR_TESTS)" \
 	-timeout $(E2E_TIMEOUT) \
 	-count 1 \
 	-v \
