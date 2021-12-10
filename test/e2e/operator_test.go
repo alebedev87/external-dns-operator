@@ -148,6 +148,7 @@ func TestOperatorAvailable(t *testing.T) {
 		t.Errorf("Did not get expected available condition: %v", err)
 	}
 }
+<<<<<<< HEAD
 */
 
 func TestExternalDNSRecordLifecycle(t *testing.T) {
