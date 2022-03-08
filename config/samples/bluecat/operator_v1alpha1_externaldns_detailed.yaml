@@ -10,9 +10,11 @@ spec:
       configFile:
         # secret should be in the operator namespace
         name: bluecat-config
-  # IDs of the hosted zones
-  zones:
-  - "myzoneid"
+  domains:
+  - filterType: Include
+    matchType: Exact
+    # domain of DNS zone must include the exact match of the given name
+    name: myzonedomain.com
   source:
     type: Service
     service:
@@ -20,13 +22,13 @@ spec:
       serviceType:
       - LoadBalancer
       - ClusterIP
-    # consider source services only with these annotations
+    # consider source services only with these labels
     labelFilter:
       matchLabels:
         external-dns.mydomain.org/publish: "yes"
     # if hostname annotation is ignored
     # you can set a template for FQDN which will be created
     # note that this template will add the name of the service to FQDN
-    # note also that the template has to match the hosted zone's domain name
+    # note also that the template has to match the zone's domain name
     fqdnTemplate:
     - "{{.Name}}.myzonedomain.com"

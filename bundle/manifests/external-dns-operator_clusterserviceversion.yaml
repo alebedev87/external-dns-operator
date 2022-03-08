@@ -26,7 +26,7 @@ metadata:
     repository: https://github.com/openshift/external-dns-operator
     support: Red Hat, Inc.
     createdAt: 2021/09/28
-    containerImage: quay.io/openshift/origin-external-dns-operator:latest
+    containerImage: quay.io/alebedev87/external-dns-operator:3.17.162
     operatorframework.io/suggested-namespace: external-dns-operator
     operators.openshift.io/infrastructure-features: '["disconnected","proxy-aware"]'
   name: external-dns-operator.v0.0.1
@@ -95,7 +95,7 @@ spec:
                   value: k8s.gcr.io/external-dns/external-dns:v0.10.2
                 - name: TRUSTED_CA_CONFIGMAP_NAME
                   value: ""
-                image: quay.io/openshift/origin-external-dns-operator:latest
+                image: quay.io/alebedev87/external-dns-operator:3.17.162
                 name: operator
                 ports:
                   - containerPort: 9443

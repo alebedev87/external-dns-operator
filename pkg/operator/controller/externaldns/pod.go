@@ -447,6 +447,8 @@ func (b *externalDNSContainerBuilder) fillInfobloxFields(container *corev1.Conta
 		args = append(args, fmt.Sprintf("--infoblox-wapi-version=%s", b.externalDNS.Spec.Provider.Infoblox.WAPIVersion))
 	}
 
+	args = addTXTPrefixFlag(args)
+
 	env := []corev1.EnvVar{
 		{
 			Name: infobloxWAPIUsernameEnvVar,

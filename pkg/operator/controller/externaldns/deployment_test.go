@@ -826,6 +826,7 @@ func TestDesiredExternalDNSDeployment(t *testing.T) {
 							"--infoblox-wapi-port=443",
 							"--infoblox-grid-host=gridhost.example.com",
 							"--infoblox-wapi-version=2.3.1",
+							"--txt-prefix=external-dns-",
 						},
 						Env: []corev1.EnvVar{
 							{
@@ -1788,6 +1789,7 @@ func TestDesiredExternalDNSDeployment(t *testing.T) {
 							"--infoblox-wapi-port=443",
 							"--infoblox-grid-host=gridhost.example.com",
 							"--infoblox-wapi-version=2.3.1",
+							"--txt-prefix=external-dns-",
 						},
 						Env: []corev1.EnvVar{
 							{

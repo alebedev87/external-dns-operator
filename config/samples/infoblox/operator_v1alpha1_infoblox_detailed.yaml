@@ -1,0 +1,37 @@
+apiVersion: externaldns.olm.openshift.io/v1alpha1
+kind: ExternalDNS
+metadata:
+  name: sample-infoblox
+spec:
+  # DNS provider
+  provider:
+    type: Infoblox
+    infoblox:
+      credentials:
+        name: infoblox-credentials
+      gridHost: "100.100.100.100"
+      wapiPort: 443
+      wapiVersion: "2.3.1"
+  # filter DNS zones
+  domains:
+  - filterType: Include
+    matchType: Exact
+    # domain of DNS zone must include the exact match of the given name
+    name: myzonedomain.com
+  source:
+    type: Service
+    service:
+      # consider only those service types
+      serviceType:
+      - LoadBalancer
+      - ClusterIP
+    # consider source services only with these labels
+    labelFilter:
+      matchLabels:
+        external-dns.mydomain.org/publish: "yes"
+    # if hostname annotation is ignored (default)
+    # you can set a template for FQDN which will be created
+    # note that this template will add the name of the service to FQDN
+    # note also that the template has to match the zone's domain name
+    fqdnTemplate:
+    - "{{.Name}}.myzonedomain.com"
