@@ -56,13 +56,11 @@ const (
 	//
 	// AWS
 	//
-	awsAccessKeyIDEnvVar     = "AWS_ACCESS_KEY_ID"
-	awsAccessKeySecretEnvVar = "AWS_SECRET_ACCESS_KEY"
-	awsAccessKeyIDKey        = "aws_access_key_id"
-	awsAccessKeySecretKey    = "aws_secret_access_key"
-	awsCredentialsVolumeName = "aws-credentials"
 	awsCredentialEnvVarName  = "AWS_SHARED_CREDENTIALS_FILE"
-	awsCredentialsPath       = "/aws/credentials"
+	awsCredentialsVolumeName = "aws-credentials"
+	awsCredentialsDir        = "/aws"
+	awsCredentialsFilePath   = "/aws/credentials"
+	awsSecretKey             = "credentials"
 	//
 	// Azure
 	//
@@ -326,22 +324,14 @@ func (b *externalDNSContainerBuilder) fillAWSFields(container *corev1.Container)
 		return
 	}
 
-	env := []corev1.EnvVar{
-		{
-			Name:  awsCredentialEnvVarName,
-			Value: awsCredentialsPath,
-		},
-	}
-
-	container.Env = append(container.Env, env...)
-
 	for _, v := range b.volumes {
 		if v.Name == awsCredentialsVolumeName {
-			container.VolumeMounts = append(container.VolumeMounts,
-				corev1.VolumeMount{
-					Name:      v.Name,
-					MountPath: awsCredentialsPath,
-				},
+			container.Env = append(container.Env, corev1.EnvVar{Name: awsCredentialEnvVarName, Value: awsCredentialsFilePath})
+			container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
+				Name:      v.Name,
+				MountPath: awsCredentialsDir,
+				ReadOnly:  true,
+			},
 			)
 		}
 	}
@@ -553,6 +543,12 @@ func (b *externalDNSVolumeBuilder) awsVolumes() []corev1.Volume {
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName: b.secretName,
+					Items: []corev1.KeyToPath{
+						{
+							Key:  awsSecretKey,
+							Path: awsSecretKey,
+						},
+					},
 				},
 			},
 		},
