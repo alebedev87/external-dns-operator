@@ -26,7 +26,7 @@ metadata:
 StringData:
   credentials: |- # Provide user profile, AWS access key id and AWS secret access key
     [default]
-    aws_access_key_id = ""
+    aws_access_key_id = " <AWS_ACCESS_KEY_ID>"
     aws_secret_access_key = ""
 ```
 
