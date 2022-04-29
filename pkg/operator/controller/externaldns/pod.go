@@ -546,8 +546,8 @@ func (b *externalDNSVolumeBuilder) awsVolumes() []corev1.Volume {
 					SecretName: b.secretName,
 					Items: []corev1.KeyToPath{
 						{
-							Key:  awsSecretKey,
-							Path: awsSecretKey,
+							Key:  awsCredentialsFileKey,
+							Path: awsCredentialsFileName,
 						},
 					},
 				},
