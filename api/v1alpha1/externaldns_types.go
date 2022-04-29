@@ -244,18 +244,12 @@ type ExternalDNSProvider struct {
 
 type ExternalDNSAWSProviderOptions struct {
 	// Credentials is a reference to a secret containing
-	// the `credentials` key which contains a user profile and corresponding fields:
+	// the shared credentials file (https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html)
+	// under `credentials` key or following keys (with corresponding values):
 	//
 	// * aws_access_key_id
 	// * aws_secret_access_key
-	//
-	// Example:
-	// 		StringData:
-	//   		credentials: |-
-	// 			[developer]
-	// 			aws_access_key_id = "abc"
-	// 			aws_secret_access_key = "xyz"
-	//
+	// 
 	// See
 	// https://github.com/kubernetes-sigs/external-dns/blob/master/docs/tutorials/aws.md
 	// for more information.
