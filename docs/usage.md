@@ -23,7 +23,7 @@ kind: Secret
 metadata:
   name: aws-access-key
   namespace: #operator namespace
-StringData:
+stringData:
   credentials: |-
     [default]
     aws_access_key_id = " <AWS_ACCESS_KEY_ID>"
