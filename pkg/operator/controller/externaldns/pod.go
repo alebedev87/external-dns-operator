@@ -330,7 +330,7 @@ func (b *externalDNSContainerBuilder) fillAWSFields(container *corev1.Container)
 			container.Env = append(container.Env, corev1.EnvVar{Name: awsCredentialEnvVarName, Value: awsCredentialsFilePath})
 			container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
 				Name:      v.Name,
-				MountPath: awsCredentialsFilePath,
+				MountPath: awsCredentialsMountPath,
 				ReadOnly:  true,
 			},
 			)

@@ -149,7 +149,7 @@ func TestDesiredExternalDNSDeployment(t *testing.T) {
 						VolumeMounts: []corev1.VolumeMount{
 							{
 								Name:      awsCredentialsVolumeName,
-								MountPath: awsCredentialsFilePath,
+								MountPath: awsCredentialsMountPath,
 								ReadOnly:  true,
 							},
 						},
@@ -1292,7 +1292,7 @@ func TestDesiredExternalDNSDeployment(t *testing.T) {
 						VolumeMounts: []corev1.VolumeMount{
 							{
 								Name:      awsCredentialsVolumeName,
-								MountPath: awsCredentialsFilePath,
+								MountPath: awsCredentialsMountPath,
 								ReadOnly:  true,
 							},
 						},
@@ -1396,7 +1396,7 @@ func TestDesiredExternalDNSDeployment(t *testing.T) {
 						VolumeMounts: []corev1.VolumeMount{
 							{
 								Name:      awsCredentialsVolumeName,
-								MountPath: awsCredentialsFilePath,
+								MountPath: awsCredentialsMountPath,
 								ReadOnly:  true,
 							},
 						},
@@ -2439,7 +2439,7 @@ func TestEnsureExternalDNSDeployment(t *testing.T) {
 									VolumeMounts: []corev1.VolumeMount{
 										{
 											Name:      awsCredentialsVolumeName,
-											MountPath: awsCredentialsFilePath,
+											MountPath: awsCredentialsMountPath,
 											ReadOnly:  true,
 										},
 									},
@@ -2777,7 +2777,7 @@ func TestEnsureExternalDNSDeployment(t *testing.T) {
 										VolumeMounts: []corev1.VolumeMount{
 											{
 												Name:      awsCredentialsVolumeName,
-												MountPath: awsCredentialsFilePath,
+												MountPath: awsCredentialsMountPath,
 												ReadOnly:  true,
 											},
 										},
@@ -2850,7 +2850,7 @@ func TestEnsureExternalDNSDeployment(t *testing.T) {
 									VolumeMounts: []corev1.VolumeMount{
 										{
 											Name:      awsCredentialsVolumeName,
-											MountPath: awsCredentialsFilePath,
+											MountPath: awsCredentialsMountPath,
 											ReadOnly:  true,
 										},
 									},
@@ -2945,7 +2945,7 @@ func TestEnsureExternalDNSDeployment(t *testing.T) {
 									VolumeMounts: []corev1.VolumeMount{
 										{
 											Name:      awsCredentialsVolumeName,
-											MountPath: awsCredentialsFilePath,
+											MountPath: awsCredentialsMountPath,
 											ReadOnly:  true,
 										},
 									},
@@ -3149,7 +3149,7 @@ func TestEnsureExternalDNSDeployment(t *testing.T) {
 										VolumeMounts: []corev1.VolumeMount{
 											{
 												Name:      awsCredentialsVolumeName,
-												MountPath: awsCredentialsFilePath,
+												MountPath: awsCredentialsMountPath,
 												ReadOnly:  true,
 											},
 										},
@@ -3223,7 +3223,7 @@ func TestEnsureExternalDNSDeployment(t *testing.T) {
 									VolumeMounts: []corev1.VolumeMount{
 										{
 											Name:      awsCredentialsVolumeName,
-											MountPath: awsCredentialsFilePath,
+											MountPath: awsCredentialsMountPath,
 											ReadOnly:  true,
 										},
 									},
