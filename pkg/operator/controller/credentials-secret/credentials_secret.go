@@ -132,7 +132,10 @@ func desiredCredentialsSecret(sourceSecret *corev1.Secret, destName types.Namesp
 	}
 
 	if extDNS.Spec.Provider.Type == operatorv1alpha1.ProviderTypeAWS {
-		secret.Data = make(map[string][]byte)
+		// Checks if the secret provided by user contains the expected keys:
+		// - If `credentials` key present in the secret, copy the same in target secret
+		// - If `aws_access_key_id` and `aws_secret_access_key` keys are present in secret, convert it to a shared credentials file under `credentials` key
+		// - For any other scenario, return error
 		switch {
 		case len(sourceSecret.Data["credentials"]) > 0:
 			secret.Data["credentials"] = sourceSecret.Data["credentials"]
