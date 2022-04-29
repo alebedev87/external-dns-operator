@@ -58,9 +58,10 @@ const (
 	//
 	awsCredentialEnvVarName  = "AWS_SHARED_CREDENTIALS_FILE"
 	awsCredentialsVolumeName = "aws-credentials"
-	awsCredentialsDir        = "/aws"
-	awsCredentialsFilePath   = "/aws/credentials"
-	awsSecretKey             = "credentials"
+	awsCredentialsMountPath        = defaultConfigMountPath
+	awsCredentialsFileKey             = "credentials"
+	awsCredentialsFileName = "aws-credentials"
+	awsCredentialsFilePath = filepath.Join(awsCredentialsMountPath, awsCredentialsFileName)
 	//
 	// Azure
 	//
