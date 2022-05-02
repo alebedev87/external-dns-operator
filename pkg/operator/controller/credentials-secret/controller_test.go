@@ -108,14 +108,14 @@ func TestReconcile(t *testing.T) {
 			expectedResult:  reconcile.Result{},
 		},
 		{
-			name:            "Target secret changed for AWS secret credentials with `credentials` key",
-			existingObjects: []runtime.Object{testAWSExtDNSInstance(), testSrcSecretWithCredentialsKey(), testTargetSecret()},
+			name:            "Target secret didn't change for AWS secret credentials with `credentials` key",
+			existingObjects: []runtime.Object{testAWSExtDNSSecretWithCredentialsKey(), testSrcSecretWithCredentialsKey(), testTargetSecretWithCredentialsKey()},
 			inputConfig:     testConfig(),
 			inputRequest:    testRequest(),
 			expectedResult:  reconcile.Result{},
 			expectedEvents: []test.Event{
 				{
-					EventType: watch.Modified,
+					EventType: watch.Added,
 					ObjType:   "secret",
 					NamespacedName: types.NamespacedName{
 						Namespace: testOperandNamespace,
@@ -126,13 +126,13 @@ func TestReconcile(t *testing.T) {
 		},
 		{
 			name:            "Target secret changed for AWS secret credentials with `aws_access_key_id` and `aws_secret_access_key`",
-			existingObjects: []runtime.Object{testAWSExtDNSInstance(), testSrcSecret(), testTargetSecret()},
+			existingObjects: []runtime.Object{testAWSExtDNSInstance(), testSrcSecret(), testTargetSecretWithCredentialsKey()},
 			inputConfig:     testConfig(),
 			inputRequest:    testRequest(),
 			expectedResult:  reconcile.Result{},
 			expectedEvents: []test.Event{
 				{
-					EventType: watch.Modified,
+					EventType: watch.Added,
 					ObjType:   "secret",
 					NamespacedName: types.NamespacedName{
 						Namespace: testOperandNamespace,
@@ -433,6 +433,19 @@ func testAWSExtDNSInstance() *operatorv1alpha1.ExternalDNS {
 	return extDNS
 }
 
+func testAWSExtDNSSecretWithCredentialsKey() *operatorv1alpha1.ExternalDNS {
+	extDNS := testExtDNSInstance()
+	extDNS.Spec.Provider = operatorv1alpha1.ExternalDNSProvider{
+		Type: operatorv1alpha1.ProviderTypeAWS,
+		AWS: &operatorv1alpha1.ExternalDNSAWSProviderOptions{
+			Credentials: operatorv1alpha1.SecretReference{
+				Name: testSrcSecretName,
+			},
+		},
+	}
+	return extDNS
+}
+
 func testAWSExtDNSInstanceRouteSource() *operatorv1alpha1.ExternalDNS {
 	extDNS := testExtDNSInstanceforOCPRouteSource()
 	extDNS.Spec.Provider = operatorv1alpha1.ExternalDNSProvider{
@@ -552,6 +565,22 @@ func testSrcSecretWithCredentialsKey() *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      testSrcSecretName,
+			Namespace: testOperatorNamespace,
+		},
+		Data: map[string][]byte{
+			"credentials": []byte(`
+				[default]
+				"aws_access_key_id": "val1"
+				"aws_secret_access_key": "val2"
+			`),
+		},
+	}
+}
+
+func testTargetSecretWithCredentialsKey() *corev1.Secret {
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      testTargetSecretName,
 			Namespace: testOperatorNamespace,
 		},
 		Data: map[string][]byte{
