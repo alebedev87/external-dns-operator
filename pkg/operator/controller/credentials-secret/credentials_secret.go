@@ -131,26 +131,23 @@ func desiredCredentialsSecret(sourceSecret *corev1.Secret, destName types.Namesp
 		return secret, nil
 	}
 
+	// copy all the keys from the source secret
+	secret.Data = sourceSecret.Data
+
 	if extDNS.Spec.Provider.Type == operatorv1alpha1.ProviderTypeAWS {
-		// Checks if the secret provided by user contains the expected keys:
-		// - If `credentials` key present in the secret, copy the same in target secret
-		// - If `aws_access_key_id` and `aws_secret_access_key` keys are present in secret, convert it to a shared credentials file under `credentials` key
-		// - For any other scenario, return error
-		switch {
-		case len(sourceSecret.Data["credentials"]) > 0:
-			secret.Data["credentials"] = sourceSecret.Data["credentials"]
-		case len(sourceSecret.Data["aws_access_key_id"]) > 0 && len(sourceSecret.Data["aws_secret_access_key"]) > 0:
-			secret.Data["credentials"] = newConfigForStaticCreds(
-				string(sourceSecret.Data["aws_access_key_id"]),
-				string(sourceSecret.Data["aws_secret_access_key"]),
-			)
-		default:
-			return nil, fmt.Errorf("invalid secret for aws credentials")
+		// Add credentials keys if doesn't exist
+		if creds, exists := secret.Data["credentials"]; !exists || len(creds) == 0 {
+			if len(sourceSecret.Data["aws_access_key_id"]) > 0 && len(sourceSecret.Data["aws_secret_access_key"]) > 0 {
+				secret.Data["credentials"] = newConfigForStaticCreds(
+					string(sourceSecret.Data["aws_access_key_id"]),
+					string(sourceSecret.Data["aws_secret_access_key"]),
+				)
+			} else {
+				return nil, fmt.Errorf("invalid secret for aws credentials")
+			}
 		}
-		return secret, nil
 	}
 
-	secret.Data = sourceSecret.Data
 	return secret, nil
 }
 
@@ -177,7 +174,7 @@ func secretsEqual(a, b *corev1.Secret) bool {
 func newConfigForStaticCreds(accessKey string, accessSecret string) []byte {
 	buf := &bytes.Buffer{}
 	fmt.Fprint(buf, "[default]\n")
-	fmt.Fprintf(buf, "aws_access_key_id = %s", accessKey)
+	fmt.Fprintf(buf, "aws_access_key_id = %s\n", accessKey)
 	fmt.Fprintf(buf, "aws_secret_access_key = %s", accessSecret)
 	return buf.Bytes()
 }
