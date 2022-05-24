@@ -94,12 +94,9 @@ func (r *reconciler) ensureExternalDNSDeployment(ctx context.Context, namespace,
 
 	// build credentials secret's hash
 	secretNsName := controller.ExternalDNSDestCredentialsSecretName(namespace, externalDNS.Name)
-	secretExists, secret, err := r.currentExternalDNSSecret(ctx, secretNsName)
+	secret, err := r.currentExternalDNSSecret(ctx, secretNsName)
 	if err != nil {
 		return false, nil, fmt.Errorf("failed to get the target secret: %w", err)
-	}
-	if !secretExists {
-		return false, nil, fmt.Errorf("target secret %q not found", secretNsName)
 	}
 
 	secretHash, err := buildMapHash(secret.Data)
@@ -112,12 +109,9 @@ func (r *reconciler) ensureExternalDNSDeployment(ctx context.Context, namespace,
 	if r.config.InjectTrustedCA {
 		configMapNsName := controller.ExternalDNSDestTrustedCAConfigMapName(namespace)
 		configMapName = configMapNsName.Name
-		cmExists, cm, err := r.currentExternalDNSTrustedCAConfigMap(ctx, configMapNsName)
+		cm, err := r.currentExternalDNSTrustedCAConfigMap(ctx, configMapNsName)
 		if err != nil {
 			return false, nil, fmt.Errorf("failed to get the target CA configmap: %w", err)
-		}
-		if !cmExists {
-			return false, nil, fmt.Errorf("target CA configmap %q not found", configMapNsName)
 		}
 
 		configMapHash, err = buildStringMapHash(cm.Data)
@@ -184,29 +178,23 @@ func (r *reconciler) currentExternalDNSDeployment(ctx context.Context, nsName ty
 }
 
 // currentExternalDNSSecret gets the current externalDNS secret resource.
-func (r *reconciler) currentExternalDNSSecret(ctx context.Context, nsName types.NamespacedName) (bool, *corev1.Secret, error) {
+func (r *reconciler) currentExternalDNSSecret(ctx context.Context, nsName types.NamespacedName) (*corev1.Secret, error) {
 	secret := &corev1.Secret{}
 	if err := r.client.Get(ctx, nsName, secret); err != nil {
-		if errors.IsNotFound(err) {
-			return false, nil, nil
-		}
-		return false, nil, err
+		return nil, err
 	}
 
-	return true, secret, nil
+	return secret, nil
 }
 
 // currentExternalDNSTrustedCAConfigMap gets the trusted CA configmap resource.
-func (r *reconciler) currentExternalDNSTrustedCAConfigMap(ctx context.Context, nsName types.NamespacedName) (bool, *corev1.ConfigMap, error) {
+func (r *reconciler) currentExternalDNSTrustedCAConfigMap(ctx context.Context, nsName types.NamespacedName) (*corev1.ConfigMap, error) {
 	cm := &corev1.ConfigMap{}
 	if err := r.client.Get(ctx, nsName, cm); err != nil {
-		if errors.IsNotFound(err) {
-			return false, nil, nil
-		}
-		return false, nil, err
+		return nil, err
 	}
 
-	return true, cm, nil
+	return cm, nil
 }
 
 // desiredExternalDNSDeployment returns the desired deployment resource.

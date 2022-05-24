@@ -18,12 +18,14 @@ package externaldnscontroller
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -57,6 +59,8 @@ type Config struct {
 	PlatformStatus *configv1.PlatformStatus
 	// InjectTrustedCA is the flag which instructs the operator to inject the trusted CA into ExternalDNS containers.
 	InjectTrustedCA bool
+	// RequeuePeriod is the period to wait after a failed reconciliation.
+	RequeuePeriod time.Duration
 }
 
 // reconciler reconciles an ExternalDNS object.
@@ -144,7 +148,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	externalDNS := &operatorv1beta1.ExternalDNS{}
 	if err := r.client.Get(ctx, req.NamespacedName, externalDNS); err != nil {
-		if errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			reqLogger.Info("externalDNS not found; reconciliation will be skipped")
 			return reconcile.Result{}, nil
 		}
@@ -172,10 +176,30 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	_, currentDeployment, err := r.ensureExternalDNSDeployment(ctx, r.config.Namespace, r.config.Image, sa, externalDNS)
 	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to ensure externalDNS deployment: %w", err)
+		res := reconcile.Result{}
+		if apierrors.IsNotFound(err) {
+			if status := apierrors.APIStatus(nil); errors.As(err, &status) {
+				details := status.Status().Details
+				if details != nil {
+					// credentials secret or trusted CA configmap was not synced yet or doesn't exist at all,
+					// either way: no need to requeue immediately polluting the logs.
+					switch details.Kind {
+					case "secrets":
+						res.RequeueAfter = r.config.RequeuePeriod
+						// show that the secret is not there yet
+						if err := r.updateExternalDNSStatus(ctx, externalDNS, currentDeployment, false); err != nil {
+							reqLogger.Error(err, "failed to update externalDNS custom resource")
+						}
+					case "configmaps":
+						res.RequeueAfter = r.config.RequeuePeriod
+					}
+				}
+			}
+		}
+		return res, fmt.Errorf("failed to ensure externalDNS deployment: %w", err)
 	}
 
-	if err := r.updateExternalDNSStatus(ctx, externalDNS, currentDeployment); err != nil {
+	if err := r.updateExternalDNSStatus(ctx, externalDNS, currentDeployment, true); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to update externalDNS custom resource %s: %w", externalDNS.Name, err)
 	}
 

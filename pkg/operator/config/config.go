@@ -22,6 +22,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/discovery"
@@ -42,6 +43,7 @@ const (
 	DefaultEnablePlatformDetection = true
 	DefaultTrustedCAConfigMapName  = ""
 	DefaultHealthProbeAddr         = ":9440"
+	DefaultRequeuePeriodSeconds    = 5
 
 	openshiftKind              = "OpenShiftAPIServer"
 	openshiftResourceGroup     = "operator.openshift.io"
@@ -90,6 +92,9 @@ type Config struct {
 	// HealthProbeBindAddress is the TCP address that the operator should bind to for
 	// serving health probes (readiness and liveness).
 	HealthProbeBindAddress string
+
+	// RequeuePeriodSeconds is the number of seconds to wait after a failed reconciliation.
+	RequeuePeriodSeconds int
 }
 
 // DetectPlatform detects the underlying platform and fills corresponding config fields
@@ -120,6 +125,11 @@ func (c *Config) FillPlatformDetails(ctx context.Context, ctrlClient ctrlclient.
 // InjectTrustedCA returns true if the trusted CA needs to be injected into ExternalDNS containers.
 func (c *Config) InjectTrustedCA() bool {
 	return len(strings.TrimSpace(c.TrustedCAConfigMapName)) != 0
+}
+
+// RequeuePeriod returns requeue period as time.Duration.
+func (c *Config) RequeuePeriod() time.Duration {
+	return time.Duration(c.RequeuePeriodSeconds) * time.Second
 }
 
 // isOCP returns true if the platform is OCP
