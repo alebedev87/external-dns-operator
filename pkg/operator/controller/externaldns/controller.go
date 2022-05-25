@@ -18,14 +18,13 @@ package externaldnscontroller
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -148,7 +147,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	externalDNS := &operatorv1beta1.ExternalDNS{}
 	if err := r.client.Get(ctx, req.NamespacedName, externalDNS); err != nil {
-		if apierrors.IsNotFound(err) {
+		if errors.IsNotFound(err) {
 			reqLogger.Info("externalDNS not found; reconciliation will be skipped")
 			return reconcile.Result{}, nil
 		}
@@ -174,29 +173,39 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return reconcile.Result{}, fmt.Errorf("failed to get externalDNS service account: %w", err)
 	}
 
-	_, currentDeployment, err := r.ensureExternalDNSDeployment(ctx, r.config.Namespace, r.config.Image, sa, externalDNS)
+	credSecretNsName := controlleroperator.ExternalDNSDestCredentialsSecretName(r.config.Namespace, externalDNS.Name)
+	credSecretExists, credSecret, err := r.currentExternalDNSSecret(ctx, credSecretNsName)
 	if err != nil {
-		res := reconcile.Result{}
-		if apierrors.IsNotFound(err) {
-			if status := apierrors.APIStatus(nil); errors.As(err, &status) {
-				details := status.Status().Details
-				if details != nil {
-					// credentials secret or trusted CA configmap was not synced yet or doesn't exist at all,
-					// either way: no need to requeue immediately polluting the logs.
-					switch details.Kind {
-					case "secrets":
-						res.RequeueAfter = r.config.RequeuePeriod
-						// show that the secret is not there yet
-						if err := r.updateExternalDNSStatus(ctx, externalDNS, currentDeployment, false); err != nil {
-							reqLogger.Error(err, "failed to update externalDNS custom resource")
-						}
-					case "configmaps":
-						res.RequeueAfter = r.config.RequeuePeriod
-					}
-				}
-			}
+		return reconcile.Result{}, fmt.Errorf("failed to get the target credentials secret: %w", err)
+	}
+	if !credSecretExists {
+		// show that the secret is not there yet
+		if err := r.updateExternalDNSStatus(ctx, externalDNS, nil, false); err != nil {
+			reqLogger.Error(err, "failed to update externalDNS custom resource")
 		}
-		return res, fmt.Errorf("failed to ensure externalDNS deployment: %w", err)
+		// credentials secret was not synced yet or doesn't exist at all,
+		// either way: no need to requeue immediately polluting the logs.
+		return reconcile.Result{RequeueAfter: r.config.RequeuePeriod}, fmt.Errorf("target credentials secret %q not found", credSecretNsName)
+	}
+
+	var trustCAConfigMap *corev1.ConfigMap
+	if r.config.InjectTrustedCA {
+		configMapNsName := controlleroperator.ExternalDNSDestTrustedCAConfigMapName(r.config.Namespace)
+		configMapExists, configMap, err := r.currentExternalDNSTrustedCAConfigMap(ctx, configMapNsName)
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to get the target CA configmap: %w", err)
+		}
+		if !configMapExists {
+			// trusted CA configmap was not synced yet or doesn't exist at all,
+			// either way: no need to requeue immediately polluting the logs.
+			return reconcile.Result{RequeueAfter: r.config.RequeuePeriod}, fmt.Errorf("target CA configmap %q not found", configMapNsName)
+		}
+		trustCAConfigMap = configMap
+	}
+
+	_, currentDeployment, err := r.ensureExternalDNSDeployment(ctx, r.config.Namespace, r.config.Image, sa, credSecret, trustCAConfigMap, externalDNS)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to ensure externalDNS deployment: %w", err)
 	}
 
 	if err := r.updateExternalDNSStatus(ctx, externalDNS, currentDeployment, true); err != nil {
