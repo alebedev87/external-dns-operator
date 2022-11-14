@@ -31,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -3027,6 +3028,15 @@ func TestExternalDNSDeploymentChanged(t *testing.T) {
 				}
 			},
 		},
+		{
+			description:        "if replica count drifts",
+			originalDeployment: testDeploymentWithReplicas(2),
+			mutate: func(depl *appsv1.Deployment) {
+				depl.Spec.Replicas = &replicas
+			},
+			expect:             true,
+			expectedDeployment: testDeployment(),
+		},
 	}
 
 	for _, tc := range testCases {
@@ -3095,6 +3105,9 @@ func TestEnsureExternalDNSDeployment(t *testing.T) {
 							"app.kubernetes.io/instance": testName,
 							"app.kubernetes.io/name":     ExternalDNSBaseName,
 						},
+					},
+					Strategy: appsv1.DeploymentStrategy{
+						Type: "Recreate",
 					},
 					Template: corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
@@ -3312,6 +3325,9 @@ func TestEnsureExternalDNSDeployment(t *testing.T) {
 							"app.kubernetes.io/name":     ExternalDNSBaseName,
 						},
 					},
+					Strategy: appsv1.DeploymentStrategy{
+						Type: "Recreate",
+					},
 					Template: corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: map[string]string{
@@ -3528,6 +3544,9 @@ func TestEnsureExternalDNSDeployment(t *testing.T) {
 							"app.kubernetes.io/name":     ExternalDNSBaseName,
 						},
 					},
+					Strategy: appsv1.DeploymentStrategy{
+						Type: "Recreate",
+					},
 					Template: corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: map[string]string{
@@ -3694,6 +3713,9 @@ func TestEnsureExternalDNSDeployment(t *testing.T) {
 							"app.kubernetes.io/name":     ExternalDNSBaseName,
 						},
 					},
+					Strategy: appsv1.DeploymentStrategy{
+						Type: "Recreate",
+					},
 					Template: corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: map[string]string{
@@ -3805,6 +3827,9 @@ func TestEnsureExternalDNSDeployment(t *testing.T) {
 							"app.kubernetes.io/instance": testName,
 							"app.kubernetes.io/name":     ExternalDNSBaseName,
 						},
+					},
+					Strategy: appsv1.DeploymentStrategy{
+						Type: "Recreate",
 					},
 					Template: corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
@@ -3944,6 +3969,9 @@ func TestEnsureExternalDNSDeployment(t *testing.T) {
 							"app.kubernetes.io/instance": testName,
 							"app.kubernetes.io/name":     ExternalDNSBaseName,
 						},
+					},
+					Strategy: appsv1.DeploymentStrategy{
+						Type: "Recreate",
 					},
 					Template: corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
@@ -4152,6 +4180,9 @@ func TestEnsureExternalDNSDeployment(t *testing.T) {
 							"app.kubernetes.io/name":     ExternalDNSBaseName,
 						},
 					},
+					Strategy: appsv1.DeploymentStrategy{
+						Type: "Recreate",
+					},
 					Template: corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: map[string]string{
@@ -4320,6 +4351,9 @@ func TestEnsureExternalDNSDeployment(t *testing.T) {
 							"app.kubernetes.io/instance": testName,
 							"app.kubernetes.io/name":     ExternalDNSBaseName,
 						},
+					},
+					Strategy: appsv1.DeploymentStrategy{
+						Type: "Recreate",
 					},
 					Template: corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
@@ -4551,6 +4585,9 @@ func TestEnsureExternalDNSDeployment(t *testing.T) {
 							"app.kubernetes.io/instance": testName,
 							"app.kubernetes.io/name":     ExternalDNSBaseName,
 						},
+					},
+					Strategy: appsv1.DeploymentStrategy{
+						Type: "Recreate",
 					},
 					Template: corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
@@ -5002,6 +5039,260 @@ func TestSecurityContextChanged(t *testing.T) {
 	}
 }
 
+func TestDeploymentStrategyChanged(t *testing.T) {
+	var (
+		twentyFivePercent = intstr.FromString("25%")
+		twentyPercent     = intstr.FromString("20%")
+		one               = intstr.FromInt(1)
+	)
+
+	for _, tc := range []struct {
+		name    string
+		current *appsv1.Deployment
+		desired *appsv1.Deployment
+		updated *appsv1.Deployment
+		changed bool
+	}{
+		{
+			name:    "Recreate added for first time",
+			current: &appsv1.Deployment{},
+			desired: &appsv1.Deployment{
+				Spec: appsv1.DeploymentSpec{
+					Strategy: appsv1.DeploymentStrategy{
+						Type: "Recreate",
+					},
+				},
+			},
+			changed: true,
+		},
+		{
+			name: "Changed from non empty RollingUpdate to Recreate",
+			current: &appsv1.Deployment{
+				Spec: appsv1.DeploymentSpec{
+					Strategy: appsv1.DeploymentStrategy{
+						Type: "RollingUpdate",
+						RollingUpdate: &appsv1.RollingUpdateDeployment{
+							MaxUnavailable: &twentyPercent,
+							MaxSurge:       &twentyPercent,
+						},
+					},
+				},
+			},
+			desired: &appsv1.Deployment{
+				Spec: appsv1.DeploymentSpec{
+					Strategy: appsv1.DeploymentStrategy{
+						Type: "Recreate",
+					},
+				},
+			},
+			changed: true,
+		},
+		{
+			name: "Changed from Recreate to empty RollingUpdate",
+			current: &appsv1.Deployment{
+				Spec: appsv1.DeploymentSpec{
+					Strategy: appsv1.DeploymentStrategy{
+						Type: "Recreate",
+					},
+				},
+			},
+			desired: &appsv1.Deployment{
+				Spec: appsv1.DeploymentSpec{
+					Strategy: appsv1.DeploymentStrategy{
+						Type: "RollingUpdate",
+					},
+				},
+			},
+			changed: true,
+		},
+		{
+			name: "Changed from Recreate to RollingUpdate with percentage params",
+			current: &appsv1.Deployment{
+				Spec: appsv1.DeploymentSpec{
+					Strategy: appsv1.DeploymentStrategy{
+						Type: "Recreate",
+					},
+				},
+			},
+			desired: &appsv1.Deployment{
+				Spec: appsv1.DeploymentSpec{
+					Strategy: appsv1.DeploymentStrategy{
+						Type: "RollingUpdate",
+						RollingUpdate: &appsv1.RollingUpdateDeployment{
+							MaxUnavailable: &twentyFivePercent,
+							MaxSurge:       &twentyFivePercent,
+						},
+					},
+				},
+			},
+			changed: true,
+		},
+		{
+			name: "Changed from Recreate to RollingUpdate with replica params",
+			current: &appsv1.Deployment{
+				Spec: appsv1.DeploymentSpec{
+					Strategy: appsv1.DeploymentStrategy{
+						Type: "Recreate",
+					},
+				},
+			},
+			desired: &appsv1.Deployment{
+				Spec: appsv1.DeploymentSpec{
+					Strategy: appsv1.DeploymentStrategy{
+						Type: "RollingUpdate",
+						RollingUpdate: &appsv1.RollingUpdateDeployment{
+							MaxUnavailable: &one,
+							MaxSurge:       &one,
+						},
+					},
+				},
+			},
+			changed: true,
+		},
+		{
+			name: "Changed from empty RollingUpdate to RollingUpdate with params",
+			current: &appsv1.Deployment{
+				Spec: appsv1.DeploymentSpec{
+					Strategy: appsv1.DeploymentStrategy{
+						Type: "RollingUpdate",
+					},
+				},
+			},
+			desired: &appsv1.Deployment{
+				Spec: appsv1.DeploymentSpec{
+					Strategy: appsv1.DeploymentStrategy{
+						Type: "RollingUpdate",
+						RollingUpdate: &appsv1.RollingUpdateDeployment{
+							MaxUnavailable: &twentyFivePercent,
+						},
+					},
+				},
+			},
+			changed: true,
+		},
+		{
+			name: "Changed from non empty RollingUpdate to RollingUpdate with params",
+			current: &appsv1.Deployment{
+				Spec: appsv1.DeploymentSpec{
+					Strategy: appsv1.DeploymentStrategy{
+						Type: "RollingUpdate",
+						RollingUpdate: &appsv1.RollingUpdateDeployment{
+							MaxUnavailable: &twentyPercent,
+							MaxSurge:       &twentyPercent,
+						},
+					},
+				},
+			},
+			desired: &appsv1.Deployment{
+				Spec: appsv1.DeploymentSpec{
+					Strategy: appsv1.DeploymentStrategy{
+						Type: "RollingUpdate",
+						RollingUpdate: &appsv1.RollingUpdateDeployment{
+							MaxUnavailable: &twentyFivePercent,
+						},
+					},
+				},
+			},
+			updated: &appsv1.Deployment{
+				Spec: appsv1.DeploymentSpec{
+					Strategy: appsv1.DeploymentStrategy{
+						Type: "RollingUpdate",
+						RollingUpdate: &appsv1.RollingUpdateDeployment{
+							MaxUnavailable: &twentyFivePercent,
+							MaxSurge:       &twentyPercent,
+						},
+					},
+				},
+			},
+			changed: true,
+		},
+		{
+			name: "Changed from non empty RollingUpdate to RollingUpdate with params 2",
+			current: &appsv1.Deployment{
+				Spec: appsv1.DeploymentSpec{
+					Strategy: appsv1.DeploymentStrategy{
+						Type: "RollingUpdate",
+						RollingUpdate: &appsv1.RollingUpdateDeployment{
+							MaxUnavailable: &twentyPercent,
+							MaxSurge:       &twentyPercent,
+						},
+					},
+				},
+			},
+			desired: &appsv1.Deployment{
+				Spec: appsv1.DeploymentSpec{
+					Strategy: appsv1.DeploymentStrategy{
+						Type: "RollingUpdate",
+						RollingUpdate: &appsv1.RollingUpdateDeployment{
+							MaxSurge: &twentyFivePercent,
+						},
+					},
+				},
+			},
+			updated: &appsv1.Deployment{
+				Spec: appsv1.DeploymentSpec{
+					Strategy: appsv1.DeploymentStrategy{
+						Type: "RollingUpdate",
+						RollingUpdate: &appsv1.RollingUpdateDeployment{
+							MaxUnavailable: &twentyPercent,
+							MaxSurge:       &twentyFivePercent,
+						},
+					},
+				},
+			},
+			changed: true,
+		},
+		{
+			name: "No changes when Recreate is expected",
+			current: &appsv1.Deployment{
+				Spec: appsv1.DeploymentSpec{
+					Strategy: appsv1.DeploymentStrategy{
+						Type: "Recreate",
+					},
+				},
+			},
+			desired: &appsv1.Deployment{
+				Spec: appsv1.DeploymentSpec{
+					Strategy: appsv1.DeploymentStrategy{
+						Type: "Recreate",
+					},
+				},
+			},
+			changed: false,
+		},
+		{
+			name: "No changes when nothing is expected",
+			current: &appsv1.Deployment{
+				Spec: appsv1.DeploymentSpec{
+					Strategy: appsv1.DeploymentStrategy{
+						Type: "Recreate",
+					},
+				},
+			},
+			desired: &appsv1.Deployment{},
+			changed: false,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			updated := tc.current.DeepCopy()
+			changed := externalDNSDeploymentStrategyChanged(tc.current, tc.desired, updated)
+			if changed != tc.changed {
+				t.Errorf("expected deployment strategy changed to be %t, got %t", tc.changed, changed)
+			}
+
+			if tc.changed {
+				expected := tc.desired
+				if tc.updated != nil {
+					expected = tc.updated
+				}
+				if diff := cmp.Diff(expected, updated); diff != "" {
+					t.Errorf("unexpected deployment (-want +got):\n%s", diff)
+				}
+			}
+		})
+	}
+}
+
 func testDeployment() *appsv1.Deployment {
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -5034,6 +5325,12 @@ func testDeployment() *appsv1.Deployment {
 			},
 		},
 	}
+}
+
+func testDeploymentWithReplicas(r int32) *appsv1.Deployment {
+	depl := testDeployment()
+	depl.Spec.Replicas = &r
+	return depl
 }
 
 func testDeploymentWithoutAnnotations() *appsv1.Deployment {
