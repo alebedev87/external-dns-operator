@@ -99,10 +99,10 @@ Prepare your environment for the installation commands.
     make bundle-image-build bundle-image-push
     ```
 
-3. Build and push the index image to the registry:
+3. Build and push the catalog image to the registry:
    ```sh
-   export INDEX_IMG=${REGISTRY}/${REPOSITORY}/external-dns-operator-bundle-index:${VERSION}
-   make index-image-build index-image-push
+   export CATALOG_IMG=${REGISTRY}/${REPOSITORY}/external-dns-operator-catalog:${VERSION}
+   make catalog-image-build catalog-image-push
    ```
 
 4. _Optional_: you may need to link the registry secret to the pod of `external-dns-operator` created in the `openshift-marketplace` namespace if the image is not made public ([Doc link](https://docs.openshift.com/container-platform/4.10/openshift_images/managing_images/using-image-pull-secrets.html#images-allow-pods-to-reference-images-from-secure-registries_using-image-pull-secrets)). If you are using `podman` then these are the instructions:
@@ -126,7 +126,7 @@ Prepare your environment for the installation commands.
      namespace: openshift-marketplace
    spec:
      sourceType: grpc
-     image: ${INDEX_IMG}
+     image: ${CATALOG_IMG}
    EOF
    ```
 
