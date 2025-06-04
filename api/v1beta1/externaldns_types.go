@@ -361,6 +361,18 @@ type ExternalDNSInfobloxProviderOptions struct {
 	// +kubebuilder:validation:Required
 	// +required
 	WAPIVersion string `json:"wapiVersion"`
+
+	// view is the DNS view.
+	// If not set, no view will be sent to Infoblox WAPI
+	// which will result in the usage of the default DNS view.
+	// DNS view cannot be longer than 64 characters
+	// and can contain only printable character
+	// Source: https://docs.infoblox.com/space/NAG8/22251550/Configuring+DNS+Views#ConfiguringDNSViews-bookmark1691.
+	//
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=64
+	// +optional
+	View string `json:"view"`
 }
 
 // SecretReference contains the information to let you locate the desired secret.
